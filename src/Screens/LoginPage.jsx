@@ -31,7 +31,7 @@ const handleSubmit = async (event) => {
 
   try {
     const { data: response } = await axios.post(
-      "http://127.0.0.1:8000/api/admin/login/",
+      "http://172.25.32.1:8000/api/admin/login/",
       {
         username,
         password,
