@@ -6,8 +6,8 @@ export default defineConfig({
     rollupOptions: {
       external: [
         "ws",
-        "bufferutil",
-        "utf-8-validate",
+        // "bufferutil",
+        // "utf-8-validate",
         "sqlite3",
         "electron-squirrel-startup",
       ],

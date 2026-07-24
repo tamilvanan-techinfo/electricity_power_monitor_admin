@@ -30,8 +30,8 @@ import AddIcon from "@mui/icons-material/Add";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/Delete";
 
-const API_BASE = "http://172.25.32.1:8000";
-const WS_URL = "ws://172.25.32.1:8000/ws/screen/admin/";
+const API_BASE = "http://127.0.0.1:8000";
+const WS_URL = "ws://127.0.0.1:8000/ws/screen/admin/";
 
 const ScreenCard = styled("div")(({ theme }) => ({
   borderRadius: 16,

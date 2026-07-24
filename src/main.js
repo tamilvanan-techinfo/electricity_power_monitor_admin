@@ -1,34 +1,48 @@
 import { app, BrowserWindow, Menu, ipcMain } from "electron";
 import path from "node:path";
 import dns from "node:dns";
+import fs from "node:fs";
 import started from "electron-squirrel-startup";
-import {WebSocketServer} from "ws";
+import { Server as SocketIOServer } from "socket.io";
+import sqlite from "sqlite3";
 
-// Handle creating/removing shortcuts on Windows when installing/uninstalling.
+import IndividualParticipantCache from "./cacheService/IndividualParicipentCache.js";
+
 if (started) {
   app.quit();
 }
 
-const REMOTE_HOST = "172.25.32.1:8000";       // real backend (Django Channels etc.)
-const LOCAL_FALLBACK_PORT = 5500;           // bundled local socket server
-const CONNECTIVITY_CHECK_HOST = "8.8.8.8";  // used purely to test internet reachability
-const CONNECTIVITY_RECHECK_MS = 15000;
+const REMOTE_HOST = "127.0.0.1:8000";
+const LOCAL_FALLBACK_PORT = 5500;
+const CONNECTIVITY_CHECK_HOST = "8.8.8.8";
+const CONNECTIVITY_CHECK_INTERVAL_MS = 5000; // check every 5s in the background
 
-let localWss = null;
-let isOnline = false;
+let db;
+let participantCache;
+let localIo = null;
+let isOnline = true; // assume online until first check completes
 let mainWindowRef = null;
 
-/**
- * Quick internet reachability check via DNS resolution.
- * Doesn't guarantee the REMOTE_HOST backend itself is reachable —
- * just that the machine has a route to the internet.
- */
+/* ---------------- Connectivity ---------------- */
+
 function checkInternet() {
   return new Promise((resolve) => {
-    dns.lookup(CONNECTIVITY_CHECK_HOST, (err) => {
-      resolve(!err);
-    });
+    dns.lookup(CONNECTIVITY_CHECK_HOST, (err) => resolve(!err));
   });
+}
+
+function getNetworkConfig() {
+  return isOnline
+    ? {
+        online: true,
+        apiBase: `http://${REMOTE_HOST}`,
+        socketBase: `http://${REMOTE_HOST}`,
+      }
+    : {
+        online: false,
+        apiBase: `http://127.0.0.1:${LOCAL_FALLBACK_PORT}`,
+        socketBase: `http://127.0.0.1:${LOCAL_FALLBACK_PORT}`,
+      };
 }
 
 function broadcastNetworkStatus() {
@@ -37,83 +51,154 @@ function broadcastNetworkStatus() {
   }
 }
 
-async function refreshConnectivity() {
+async function pollConnectivity() {
   const online = await checkInternet();
 
   if (online !== isOnline) {
     isOnline = online;
     console.log(`Network status changed: ${isOnline ? "ONLINE" : "OFFLINE"}`);
-    broadcastNetworkStatus();
+    broadcastNetworkStatus(); // renderer listens for this and swaps to the offline dashboard
   }
 }
 
-function getNetworkConfig() {
-  return isOnline
-    ? {
-        online: true,
-        apiBase: `http://${REMOTE_HOST}`,
-        wsBase: `ws://${REMOTE_HOST}`,
-      }
-    : {
-        online: false,
-        apiBase: `http://172.25.32.1:${LOCAL_FALLBACK_PORT}`,
-        wsBase: `ws://172.25.32.1:${LOCAL_FALLBACK_PORT}`,
-      };
+function startConnectivityWatcher() {
+  // runs continuously in the background for the lifetime of the app
+  setInterval(pollConnectivity, CONNECTIVITY_CHECK_INTERVAL_MS);
 }
 
-/**
- * Local fallback WebSocket server — always running, so the app keeps working
- * (e.g. against locally cached/generated data) even with no internet.
- */
+/* ---------------- SQLite ---------------- */
+
+function getDatabasePath() {
+  return path.join(app.getPath("userData"), "cache.db");
+}
+
+function ensureDatabaseFile() {
+  const dbPath = getDatabasePath();
+  const dir = path.dirname(dbPath);
+
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  if (!fs.existsSync(dbPath)) {
+    fs.writeFileSync(dbPath, "");
+  }
+
+  return dbPath;
+}
+
+function initDatabase() {
+  return new Promise((resolve, reject) => {
+    sqlite.verbose();
+    const dbPath = ensureDatabaseFile();
+
+    db = new sqlite.Database(dbPath, (err) => {
+      if (err) return reject(err);
+
+      console.log("Connected to SQLite:", dbPath);
+
+      db.run(
+        `
+        CREATE TABLE IF NOT EXISTS individual_participants (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            screen_name TEXT NOT NULL,
+            cycle TEXT NOT NULL,
+            total_voltage REAL NOT NULL,
+            total_amperage REAL NOT NULL,
+            total_power REAL NOT NULL,
+            participant_name TEXT NOT NULL,
+            profile_image TEXT,
+            participant_voltage REAL NOT NULL,
+            participant_amperage REAL NOT NULL,
+            participant_power REAL NOT NULL,
+            ts REAL NOT NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        `,
+        (err2) => {
+          if (err2) return reject(err2);
+          participantCache = new IndividualParticipantCache(db);
+          resolve();
+        }
+      );
+    });
+  });
+}
+
+/* ---------------- Local socket.io fallback ---------------- */
+
 function startLocalSocketServer() {
-  if (localWss) {
-    return localWss;
-  }
+  if (localIo) return localIo;
 
-  localWss = new WebSocketServer({ port: LOCAL_FALLBACK_PORT, path: "/ws/" });
-
-  localWss.on("listening", () => {
-    console.log(`Local fallback WebSocket server listening on ws://172.25.32.1:${LOCAL_FALLBACK_PORT}/ws/`);
+  localIo = new SocketIOServer(LOCAL_FALLBACK_PORT, {
+    cors: { origin: "*" },
   });
 
-  localWss.on("connection", (socket) => {
-    console.log("Client connected to local fallback WebSocket server");
+  localIo.on("connection", (socket) => {
+    console.log("Client connected to local fallback socket.io server:", socket.id);
 
-    socket.on("message", (message) => {
-      console.log("Local WS received message:", message.toString());
+    socket.on("disconnect", (reason) => {
+      console.log("Client disconnected from local fallback server:", socket.id, reason);
     });
 
-    socket.on("close", () => {
-      console.log("Client disconnected from local fallback WebSocket server");
-    });
+    // Renderer's offline dashboard emits this when the operator manually
+    // updates a score — persist it, then broadcast it back out to any
+    // other connected screens so they stay in sync while offline.
+    socket.on("manual_score_update", async (payload) => {
+      try {
+        const result = await participantCache.save({
+          screen_name: payload.screen_name || "Individual",
+          cycle: payload.cycle,
+          total_voltage: payload.total_voltage,
+          total_amperage: payload.total_amperage,
+          total_power: payload.total_power,
+          participant_name: payload.participant_name || "",
+          profile_image: payload.profile_image || "",
+          participant_voltage: payload.participant_voltage || 0,
+          participant_amperage: payload.participant_amperage || 0,
+          participant_power: payload.participant_power || 0,
+          ts: Date.now(),
+        });
 
-    socket.on("error", (err) => {
-      console.error("Local WS client error:", err);
+        localIo.emit("score_updated", { ...payload, ...result });
+      } catch (err) {
+        console.error("Failed to save manual score update:", err);
+        socket.emit("score_update_error", { message: err.message });
+      }
     });
   });
 
-  localWss.on("error", (err) => {
-    console.error("Local fallback WebSocket server error:", err);
-  });
-
-  return localWss;
+  console.log(`Local fallback socket.io server listening on http://127.0.0.1:${LOCAL_FALLBACK_PORT}`);
+  return localIo;
 }
 
 function stopLocalSocketServer() {
-  if (!localWss) return;
-
-  localWss.clients.forEach((client) => client.terminate());
-  localWss.close(() => {
-    console.log("Local fallback WebSocket server closed");
-  });
-  localWss = null;
+  if (!localIo) return;
+  localIo.close(() => console.log("Local fallback socket.io server closed"));
+  localIo = null;
 }
 
-function registerNetworkIPC() {
-  ipcMain.handle("network:get-config", async () => {
-    return getNetworkConfig();
+/* ---------------- IPC ---------------- */
+
+function registerIPC() {
+  ipcMain.handle("network:get-config", async () => getNetworkConfig());
+
+  // Lets the renderer's offline dashboard save a score directly via IPC too
+  // (not just through the socket) — handy for a plain form submit.
+  ipcMain.handle("participant:save", async (_, data) => {
+    return await participantCache.save(data);
+  });
+
+  ipcMain.handle("participant:getAll", async () => {
+    return new Promise((resolve, reject) => {
+      db.all(`SELECT * FROM individual_participants ORDER BY cycle ASC`, [], (err, rows) => {
+        if (err) return reject(err);
+        resolve(rows || []);
+      });
+    });
   });
 }
+
+/* ---------------- Window / app lifecycle ---------------- */
 
 const createWindow = () => {
   const mainWindow = new BrowserWindow({
@@ -133,10 +218,7 @@ const createWindow = () => {
     mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
   } else {
     mainWindow.loadFile(
-      path.join(
-        __dirname,
-        `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`
-      )
+      path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`)
     );
   }
 
@@ -147,13 +229,7 @@ app.whenReady().then(async () => {
   const template = [
     {
       label: "File",
-      submenu: [
-        {
-          label: "Exit",
-          accelerator: "Alt+F4",
-          click: () => app.quit(),
-        },
-      ],
+      submenu: [{ label: "Exit", accelerator: "Alt+F4", click: () => app.quit() }],
     },
     {
       label: "View",
@@ -173,42 +249,42 @@ app.whenReady().then(async () => {
       submenu: [
         {
           label: "About",
-          click: () => {
-            console.log("Electricity Power Monitor Admin");
-          },
+          click: () => console.log("Electricity Power Monitor Admin"),
         },
       ],
     },
   ];
 
-  const menu = Menu.buildFromTemplate(template);
-  Menu.setApplicationMenu(menu);
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 
-  // 1. Always start the local fallback socket server, whether or not we're online.
-  startLocalSocketServer();
+  try {
+    await initDatabase();
 
-  // 2. Check connectivity once before the window opens, so the renderer's
-  //    first getNetworkConfig() call already reflects reality...
-  isOnline = await checkInternet();
-  console.log(`Initial network status: ${isOnline ? "ONLINE" : "OFFLINE"}`);
+    startLocalSocketServer();
 
-  // 3. ...and keep rechecking periodically in case connectivity changes mid-session.
-  setInterval(refreshConnectivity, CONNECTIVITY_RECHECK_MS);
+    // do an initial synchronous check so the very first render already knows
+    isOnline = await checkInternet();
+    console.log(`Initial network status: ${isOnline ? "ONLINE" : "OFFLINE"}`);
 
-  registerNetworkIPC();
+    startConnectivityWatcher(); // keeps running in the background for the app's lifetime
 
-  createWindow();
+    registerIPC();
 
-  app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    }
-  });
+    createWindow();
+
+    app.on("activate", () => {
+      if (BrowserWindow.getAllWindows().length === 0) {
+        createWindow();
+      }
+    });
+  } catch (err) {
+    console.error("Application startup failed:", err);
+  }
 });
 
 app.on("window-all-closed", () => {
   stopLocalSocketServer();
-
+  if (db) db.close();
   if (process.platform !== "darwin") {
     app.quit();
   }
