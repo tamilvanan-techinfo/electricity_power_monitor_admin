@@ -5,6 +5,7 @@ import LoginPage from "./Screens/LoginPage";
 import AppShell from "./AppShell";
 import DashboardPage from "./Screens/Dashboard";
 import ScreenManager from "./Screens/ScreenManager";
+import ManualScoring from "./Screens/ManualScoring";
 const protectedRoutes = [
   {
     path: "/dashboard",
@@ -14,6 +15,10 @@ const protectedRoutes = [
   {
     path: "/screenManager",
     element: <ScreenManager />,
+  },
+  {
+    path: "/ManualScoring",
+    element: <ManualScoring />,
   },
 ];
 
