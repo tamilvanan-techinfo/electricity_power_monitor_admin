@@ -26,34 +26,47 @@ import { useTheme } from "@mui/material/styles";
 import { styled } from "@mui/system";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import LiveTvIcon from "@mui/icons-material/LiveTv";
+import StopCircleOutlinedIcon from "@mui/icons-material/StopCircleOutlined";
 import AddIcon from "@mui/icons-material/Add";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/Delete";
+import LiveDot from "../components/LiveDot";
+import { tokens } from "../Theme";
+import ScreenControlDrawer from "../components/ScreenControlDrawer";
 
 const API_BASE = "http://127.0.0.1:8000";
 const WS_URL = "ws://127.0.0.1:8000/ws/screen/admin/";
 
-const ScreenCard = styled("div")(({ theme }) => ({
-  borderRadius: 16,
-  boxShadow: theme.shadows[4],
+// Control-panel card: hairline border instead of a drop shadow, teal glow
+// on the currently-live tile so the grid reads like a bank of monitors.
+const ScreenCard = styled("div")(({ theme, islive }) => ({
+  borderRadius: 12,
   height: "100%",
   display: "flex",
   flexDirection: "column",
   backgroundColor: theme.palette.background.paper,
-  transition: "transform 0.15s ease, box-shadow 0.15s ease",
+  border: `1px solid ${islive === "true" ? tokens.current : theme.palette.divider}`,
+  boxShadow: islive === "true" ? `0 0 0 1px ${tokens.current}33, 0 0 24px ${tokens.current}22` : "none",
+  transition: "border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease",
   "&:hover": {
-    transform: "translateY(-3px)",
-    boxShadow: theme.shadows[8],
+    transform: "translateY(-2px)",
+    borderColor: islive === "true" ? tokens.current : theme.palette.text.secondary,
   },
 }));
 
 function ScreenManager() {
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
-
+const [drawerOpen, setDrawerOpen] = useState(false);
+const [screen,setScreen] = useState(null)
   const [screens, setScreens] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [connected, setConnected] = useState(false);
+
   const wsRef = useRef(null);
+  const shouldReconnect = useRef(true);
+  const reconnectAttempts = useRef(0);
+  const reconnectTimeoutRef = useRef(null);
 
   const [formOpen, setFormOpen] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
@@ -70,6 +83,8 @@ function ScreenManager() {
     connectWebSocket();
 
     return () => {
+      shouldReconnect.current = false;
+      clearTimeout(reconnectTimeoutRef.current);
       if (wsRef.current) wsRef.current.close();
     };
   }, []);
@@ -95,11 +110,14 @@ function ScreenManager() {
 
       socket.onopen = () => {
         console.log("Screen WebSocket connected");
+        reconnectAttempts.current = 0;
+        setConnected(true);
       };
 
       socket.onmessage = (event) => {
         try {
           const msg = JSON.parse(event.data);
+
           if (msg.type === "update" && msg.screen) {
             setScreens((prev) =>
               prev.map((s) => (s.id === msg.screen.id ? msg.screen : s))
@@ -110,30 +128,45 @@ function ScreenManager() {
             setScreens((prev) => prev.filter((s) => s.id !== msg.id));
           }
         } catch (e) {
-          console.error("Error parsing WS message", e);
+          console.error("Error parsing WS message:", e);
         }
       };
 
-      socket.onclose = () => {
-        console.log("Screen WebSocket closed");
+      socket.onclose = (event) => {
+        console.log("Screen WebSocket closed", event.code);
+        setConnected(false);
+
+        if (!shouldReconnect.current) return;
+
+        reconnectAttempts.current += 1;
+
+        // Exponential backoff (max 30 seconds)
+        const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
+
+        console.log(`Reconnecting in ${delay / 1000}s...`);
+
+        reconnectTimeoutRef.current = setTimeout(() => {
+          connectWebSocket();
+        }, delay);
       };
 
       socket.onerror = (err) => {
         console.error("Screen WebSocket error:", err);
+        socket.close();
       };
     } catch (err) {
       console.error("Failed to connect WebSocket:", err);
+
+      if (shouldReconnect.current) {
+        reconnectTimeoutRef.current = setTimeout(() => {
+          connectWebSocket();
+        }, 5000);
+      }
     }
   };
 
   const openAddDialog = () => {
-    setForm({
-      id: null,
-      name: "",
-      path: "",
-      is_live: false,
-      thumbnail: null,
-    });
+    setForm({ id: null, name: "", path: "", is_live: false, thumbnail: null });
     setFormOpen(true);
   };
 
@@ -150,13 +183,7 @@ function ScreenManager() {
 
   const closeDialog = () => {
     setFormOpen(false);
-    setForm({
-      id: null,
-      name: "",
-      path: "",
-      is_live: false,
-      thumbnail: null,
-    });
+    setForm({ id: null, name: "", path: "", is_live: false, thumbnail: null });
   };
 
   const handleFormChange = (e) => {
@@ -228,69 +255,83 @@ function ScreenManager() {
   };
 
   // Toggle live status for one screen
-const handleToggleLive = async (screen) => {
-  try {
-    const newIsLive = !screen.is_live;
+  const handleToggleLive = async (screen) => {
+    try {
+      const newIsLive = !screen.is_live;
 
-
-    // Optimistic update in UI:
-    setScreens((prev) =>
-      prev.map((s) => {
-        if (s.id === screen.id) {
-          return { ...s, is_live: newIsLive };
-        }
-        // if we just set one live, force all others to false
-        if (newIsLive) {
-          return { ...s, is_live: false };
-        }
-        return s;
-      })
-    );
-
-    // WebSocket notify backend / other clients
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(
-        JSON.stringify({
-          type: "set_live_screen",      // <- match your Channels event name
-          screen_id: screen.id,
-          is_live: newIsLive,
+      // Optimistic update in UI: setting one live forces all others off
+      setScreens((prev) =>
+        prev.map((s) => {
+          if (s.id === screen.id) return { ...s, is_live: newIsLive };
+          if (newIsLive) return { ...s, is_live: false };
+          return s;
         })
       );
+
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(
+          JSON.stringify({
+            type: "set_live_screen",
+            screen_id: screen.id,
+            is_live: newIsLive,
+          })
+        );
+      }
+    } catch (err) {
+      console.error("Error toggling live status:", err);
+      alert("Error toggling live status");
     }
-  } catch (err) {
-    console.error("Error toggling live status:", err);
-    alert("Error toggling live status");
-  }
-};
+  };
 
   return (
-    <Box
-      sx={{
-        p: 3,
-        minHeight: "100vh",
-        backgroundColor: theme.palette.background.default,
-      }}
-    >
+    <Box sx={{ p: { xs: 1.5, sm: 2, md: 3 }, minHeight: "100vh", backgroundColor: theme.palette.background.default }}>
       {/* Header */}
-      <Box
-        sx={{
-          mb: 2,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 2,
-        }}
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        justifyContent="space-between"
+        alignItems={{ xs: "flex-start", sm: "center" }}
+        spacing={1.5}
+        sx={{ mb: { xs: 2, md: 3 } }}
       >
         <Box>
-          <Typography variant="h4" fontWeight={600}>
-            Screen Manager
-          </Typography>
-          <Typography variant="subtitle1" color="text.secondary">
-            Manage and monitor all screens with live status updates.
+          <Stack direction="row" spacing={1.25} alignItems="center">
+            <Box
+              sx={{
+                width: 34,
+                height: 34,
+                borderRadius: "9px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                bgcolor: isDark ? "rgba(34,211,196,0.14)" : "rgba(15,156,144,0.10)",
+              }}
+            >
+              <LiveTvIcon sx={{ fontSize: 19, color: "primary.main" }} />
+            </Box>
+            <Typography variant="h4" fontWeight={800}>
+              Screen Manager
+            </Typography>
+          </Stack>
+          <Typography variant="subtitle1" color="text.secondary" sx={{ mt: 0.5 }}>
           </Typography>
         </Box>
 
-        <Stack direction="row" spacing={1} alignItems="center">
+        <Stack direction={{ xs: "row" }} spacing={1} alignItems="center" flexWrap="wrap">
+          <Chip
+            icon={<LiveDot size={7} color={connected ? tokens.current : theme.palette.text.secondary} sx={{ ml: "6px !important", animation: connected ? "livePulse 2s ease-in-out infinite" : "none" }} />}
+            label={connected ? "SOCKET ONLINE" : "RECONNECTING"}
+            variant="outlined"
+            size="small"
+            sx={{
+              fontFamily: "'IBM Plex Mono', monospace",
+              fontWeight: 600,
+              fontSize: "0.7rem",
+              letterSpacing: "0.05em",
+              borderColor: connected ? "primary.main" : theme.palette.divider,
+              color: connected ? "primary.main" : "text.secondary",
+              "& .MuiChip-icon": { color: "inherit" },
+            }}
+          />
           <Tooltip title="Refresh screens">
             <span>
               <IconButton onClick={fetchScreens} disabled={loading}>
@@ -298,71 +339,63 @@ const handleToggleLive = async (screen) => {
               </IconButton>
             </span>
           </Tooltip>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={openAddDialog}
-          >
+          <Button variant="contained" startIcon={<AddIcon />} onClick={openAddDialog}>
             Add Screen
           </Button>
         </Stack>
-      </Box>
+      </Stack>
 
       {/* Grid */}
       {screens.length === 0 && !loading ? (
         <Box
           sx={{
-            mt: 4,
+            mt: 6,
             textAlign: "center",
             color: theme.palette.text.secondary,
+            border: `1px dashed ${theme.palette.divider}`,
+            borderRadius: "12px",
+            py: 6,
           }}
         >
-          <Typography variant="body1">
-            No screens found. Click “Add Screen” to create one.
-          </Typography>
+          <Typography variant="body1">No screens found. Click "Add Screen" to create one.</Typography>
         </Box>
       ) : (
         <Grid container spacing={3}>
           {screens.map((screen) => (
-            <Grid
-                      // ✅ OK here, this is MUI Grid
-                key={screen.id}
-                xs={12}
-                sm={6}
-                md={4}
-                lg={3}
-                >
-              <ScreenCard>
+            <Grid key={screen.id} xs={12} sm={6} md={4} lg={3}>
+              <ScreenCard islive={screen.is_live ? "true" : "false"}>
                 <CardHeader
                   title={
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <Typography
-                        variant="subtitle1"
-                        fontWeight={600}
-                        noWrap
-                      >
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {screen.name}
-                      </Typography>
+                      </span>
                       {screen.is_live && (
                         <Chip
-                          icon={<LiveTvIcon sx={{ fontSize: 16 }} />}
-                          label="Live"
+                          icon={<LiveDot size={6} color="#032420" sx={{ ml: "5px !important" }} />}
+                          label="LIVE"
                           size="small"
-                          color="error"
                           sx={{
                             ml: 0.5,
                             height: 22,
-                            "& .MuiChip-label": { px: 0.5 },
+                            bgcolor: tokens.current,
+                            color: "#032420",
+                            fontWeight: 700,
+                            fontSize: "0.68rem",
+                            letterSpacing: "0.04em",
+                            "& .MuiChip-label": { px: 0.75 },
+                            "& .MuiChip-icon": { color: "inherit" },
                           }}
                         />
                       )}
-                    </Box>
+                    </Stack>
                   }
                   subheader={screen.path}
                   sx={{
                     pb: 0,
                     "& .MuiCardHeader-subheader": {
-                      fontSize: 12,
+                      fontFamily: "'IBM Plex Mono', monospace",
+                      fontSize: 11.5,
                       whiteSpace: "nowrap",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
@@ -371,19 +404,12 @@ const handleToggleLive = async (screen) => {
                   action={
                     <Stack direction="row" spacing={0.5}>
                       <Tooltip title="Edit screen">
-                        <IconButton
-                          size="small"
-                          onClick={() => openEditDialog(screen)}
-                        >
+                        <IconButton size="small" onClick={() => openEditDialog(screen)}>
                           <EditOutlinedIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Delete screen">
-                        <IconButton
-                          size="small"
-                          color="error"
-                          onClick={() => handleDeleteScreen(screen)}
-                        >
+                        <IconButton size="small" color="error" onClick={() => handleDeleteScreen(screen)}>
                           <DeleteOutlineIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
@@ -391,105 +417,108 @@ const handleToggleLive = async (screen) => {
                   }
                 />
 
-              {screen.thumbnail && (
-  <Box
-    sx={{
-      mt: 1.5,
-      mx: 2,
-      borderRadius: 2,
-      overflow: "hidden",          // clip image to rounded corners
-      height: 150,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor: "background.default", // subtle backdrop in dark mode
-    }}
-  >
-    <CardMedia
-      component="img"
-      image={`${API_BASE}${screen.thumbnail}`}
-      alt={screen.name}
-      sx={{
-        width: "100%",
-        height: "100%",
-        objectFit: "cover",        // fill container without stretching
-        display: "block",
-      }}
-    />
-  </Box>
-)}
-
-                <CardContent sx={{ flexGrow: 1, pt: screen.thumbnail ? 1 : 2 }}>
-  <Typography variant="body2" color="text.secondary" noWrap>
-    Path: {screen.path}
-  </Typography>
-
-  {/* OLD: Chip inside Typography (invalid) */}
-  {/* 
-  <Typography
-    variant="body2"
-    color="text.secondary"
-    sx={{ mt: 0.5 }}
-  >
-    Status:{" "}
-    <Chip
-      label={screen.is_live ? "Live" : "Offline"}
-      size="small"
-      color={screen.is_live ? "success" : "default"}
-      variant={isDark && !screen.is_live ? "outlined" : "filled"}
-      sx={{ ml: 0.5 }}
-    />
-  </Typography>
-  */}
-
-  {/* NEW: use Box so Chip is not inside <p> */}
-  <Box
-    sx={{
-      mt: 0.5,
-      display: "flex",
-      alignItems: "center",
-      gap: 0.5,
-    }}
-  >
-    <Typography variant="body2" color="text.secondary">
-      Status:
-    </Typography>
-    <Chip
-      label={screen.is_live ? "Live" : "Offline"}
-      size="small"
-      color={screen.is_live ? "success" : "default"}
-      variant={isDark && !screen.is_live ? "outlined" : "filled"}
-    />
-  </Box>
-</CardContent>
-
-                <CardActions
-                  sx={{
-                    px: 2,
-                    pb: 2,
-                    pt: 0,
-                    justifyContent: "space-between",
-                  }}
-                >
-                  {
-                    !screen.is_live && (
-                        <Button
-                    size="small"
-                    variant={screen.is_live ? "outlined" : "contained"}
-                    color="success"
-                    startIcon={<LiveTvIcon />}
-                    onClick={() => handleToggleLive(screen)}
+                {screen.thumbnail && (
+                  <Box
+                    sx={{
+                      mt: 1.5,
+                      mx: 2,
+                      borderRadius: "8px",
+                      overflow: "hidden",
+                      height: 150,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor: "background.default",
+                      border: `1px solid ${theme.palette.divider}`,
+                    }}
                   >
-                    Set Live
-                  </Button>
-                    )
-                  }
+                    <CardMedia
+                      component="img"
+                      image={`${API_BASE}${screen.thumbnail}`}
+                      alt={screen.name}
+                      sx={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                    />
+                  </Box>
+                )}
+
+                <CardContent sx={{ flexGrow: 1, pt: screen.thumbnail ? 1.25 : 2 }}>
+                  <Box sx={{ mt: 1, display: "flex", alignItems: "center", gap: 0.75 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Status:
+                    </Typography>
+                    <Chip
+                      label={screen.is_live ? "Live" : "Offline"}
+                      size="small"
+                      color={screen.is_live ? "success" : "default"}
+                      variant={isDark && !screen.is_live ? "outlined" : "filled"}
+                    />
+                  </Box>
+                </CardContent>
+
+                <CardActions sx={{ px: 2, pb: 2, pt: 0 }}>
+                  {screen.is_live ? (
+                    <>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      color="inherit"
+                      startIcon={<StopCircleOutlinedIcon />}
+                      onClick={() => handleToggleLive(screen)}
+                      fullWidth
+                    >
+                      Stop Live
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      color="inherit"
+                      
+                      onClick={() => {setDrawerOpen(true);setScreen(screen)}}
+                      fullWidth
+                    >
+                      Control Screen
+                    </Button>
+                    </>
+                  ) : (
+                    <Button
+                      size="small"
+                      variant="contained"
+                      startIcon={<LiveTvIcon />}
+                      onClick={() => handleToggleLive(screen)}
+                      fullWidth
+                      sx={{ bgcolor: tokens.current, color: "#032420", "&:hover": { bgcolor: tokens.currentDark, color: "#fff" } }}
+                    >
+                      Set Live
+                    </Button>
+                  )}
                 </CardActions>
               </ScreenCard>
             </Grid>
           ))}
         </Grid>
       )}
+      {/* Drawer for the Screen Controller */}
+      <ScreenControlDrawer
+      screen={screen}
+  open={drawerOpen}
+  onClose={() => setDrawerOpen(false)}
+  socket={wsRef}
+  onApply={(data) => {
+    console.log(data);
+
+    // Send to backend/WebSocket
+    // {
+    //   width,
+    //   height,
+    //   x,
+    //   y,
+    //   marginLeft,
+    //   fullscreen,
+    //   alwaysOnTop,
+    //   resizable
+    // }
+  }}
+/>
 
       {/* Add/Edit dialog */}
       <Dialog open={formOpen} onClose={closeDialog} fullWidth maxWidth="sm">
@@ -523,30 +552,14 @@ const handleToggleLive = async (screen) => {
 
             <FormControlLabel
               control={
-                <Switch
-                  checked={form.is_live}
-                  onChange={handleFormChange}
-                  name="is_live"
-                  color="success"
-                />
+                <Switch checked={form.is_live} onChange={handleFormChange} name="is_live" color="success" />
               }
               label="Is Live"
             />
 
-            <Button
-              variant="outlined"
-              component="label"
-              size="small"
-              sx={{ alignSelf: "flex-start" }}
-            >
+            <Button variant="outlined" component="label" size="small" sx={{ alignSelf: "flex-start" }}>
               {form.thumbnail ? "Change Thumbnail" : "Upload Thumbnail"}
-              <input
-                type="file"
-                name="thumbnail"
-                accept="image/*"
-                hidden
-                onChange={handleFormChange}
-              />
+              <input type="file" name="thumbnail" accept="image/*" hidden onChange={handleFormChange} />
             </Button>
             {form.thumbnail && (
               <Typography variant="caption" color="text.secondary">
@@ -561,16 +574,8 @@ const handleToggleLive = async (screen) => {
           <Button onClick={closeDialog} color="inherit" disabled={formLoading}>
             Cancel
           </Button>
-          <Button
-            onClick={handleSaveScreen}
-            variant="contained"
-            disabled={formLoading}
-          >
-            {formLoading
-              ? "Saving..."
-              : form.id
-              ? "Update Screen"
-              : "Save Screen"}
+          <Button onClick={handleSaveScreen} variant="contained" disabled={formLoading}>
+            {formLoading ? "Saving..." : form.id ? "Update Screen" : "Save Screen"}
           </Button>
         </DialogActions>
       </Dialog>

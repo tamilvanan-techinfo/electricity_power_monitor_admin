@@ -4,6 +4,7 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Dashboard from '../Screens/Dashboard';
 import ScreenManager from '../Screens/ScreenManager';
+import ManualScoring from '../Screens/ManualScoring';
 
 export default function DemoPageContent({ pathname }) {
 
@@ -19,6 +20,8 @@ export default function DemoPageContent({ pathname }) {
 
     case '/ScreenManager':
       return <ScreenManager/>
+    case '/ManualScoring':
+      return <ManualScoring/>
 
     default:
       title = 'Page not found';

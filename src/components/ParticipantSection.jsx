@@ -27,7 +27,7 @@ import DeleteOutlineIcon from "@mui/icons-material/Delete";
 const API_BASE = "http://127.0.0.1:8000";
 const MEDIA_BASE = API_BASE;
 
-function ParticipantSection() {
+function ParticipantSection({onDataChange}) {
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
 
@@ -122,6 +122,7 @@ function ParticipantSection() {
 
       handleClose();
       fetchParticipants();
+      onDataChange?.();
     } catch (err) {
       console.error("Error saving participant:", err);
       alert("Error saving participant");
@@ -142,6 +143,7 @@ function ParticipantSection() {
       }
 
       fetchParticipants();
+      onDataChange?.();
     } catch (err) {
       console.error("Error deleting participant:", err);
       alert("Error deleting participant");
@@ -177,9 +179,6 @@ function ParticipantSection() {
         headerName: "Name",
         flex: 1,
         minWidth: 160,
-        renderCell: (params) => (
-          <Typography fontWeight={500}>{params.value}</Typography>
-        ),
       },
       {
         field: "dob",
@@ -214,13 +213,13 @@ function ParticipantSection() {
         headerName: "Actions",
         sortable: false,
         filterable: false,
-        width: 220,
-        align: "right",
-        headerAlign: "right",
+        width: 200,
+        align: "center",
+        headerAlign: "center",
         renderCell: (params) => {
           const row = params.row;
           return (
-            <Stack direction="row" spacing={1} justifyContent="flex-end">
+            <Stack direction="row" spacing={0.5} alignItems="center" justifyContent="center" sx={{ width: "100%", height: "65%" }}>
               <Tooltip title="Edit participant">
                 <Button
                   variant="outlined"
@@ -264,7 +263,7 @@ function ParticipantSection() {
           title="Participant List"
           subheader="Manage participant profiles and registration details."
           action={
-            <Stack direction="row" spacing={1} alignItems="center">
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: { xs: 1, sm: 0 } }}>
               {loading && <CircularProgress size={20} sx={{ mr: 1 }} />}
               <Button
                 variant="contained"
@@ -279,6 +278,8 @@ function ParticipantSection() {
           }
           sx={{
             pb: 0,
+            flexWrap: "wrap",
+            "& .MuiCardHeader-action": { alignSelf: "center", mt: 0 },
             "& .MuiCardHeader-subheader": {
               fontSize: 13,
               opacity: 0.8,
@@ -288,7 +289,7 @@ function ParticipantSection() {
         <CardContent sx={{ pt: 1 }}>
           <Box
             sx={{
-              height: 420,
+              height: { xs: 360, sm: 420 },
               width: "100%",
               "& .MuiDataGrid-root": {
                 borderRadius: 2,

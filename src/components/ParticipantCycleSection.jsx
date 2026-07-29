@@ -1,6 +1,7 @@
 // src/components/ParticipantCycleSection.jsx
 import React, { useEffect, useState, useMemo } from "react";
 import {
+  Avatar,
   Box,
   Button,
   Card,
@@ -25,8 +26,9 @@ import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/Delete";
 
 const API_BASE = "http://127.0.0.1:8000";
+const MEDIA_BASE = API_BASE;
 
-function ParticipantCycleSection() {
+function ParticipantCycleSection({refreshTrigger}) {
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
 
@@ -48,7 +50,7 @@ function ParticipantCycleSection() {
 
   useEffect(() => {
     fetchAll();
-  }, []);
+  }, [refreshTrigger]);
 
   const fetchAll = async () => {
     setLoading(true);
@@ -92,10 +94,22 @@ function ParticipantCycleSection() {
   };
 
   const handleOpenEdit = (row) => {
+    // Merge current participant into available list if not already present
+    setParticipants((prev) =>
+      prev.find((p) => p.id === row.participent)
+        ? prev
+        : [...prev, { id: row.participent, name: row.participent_name }]
+    );
+    // Merge current cycle into available list if not already present
+    setCycles((prev) =>
+      prev.find((c) => c.id === row.cycle)
+        ? prev
+        : [...prev, { id: row.cycle, cycle_no: row.cycle_no }]
+    );
     setForm({
       id: row.id,
-      participant: row.participent, // numeric id from API
-      cycle: row.cycle,             // numeric id from API
+      participant: row.participent,
+      cycle: row.cycle,
       power: row.power ?? "",
       voltage: row.voltage ?? "",
       amperage: row.amperage ?? "",
@@ -109,6 +123,7 @@ function ParticipantCycleSection() {
   };
 
   const handleChange = (e) => {
+    
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
@@ -123,12 +138,14 @@ function ParticipantCycleSection() {
       const method = isEdit ? "PUT" : "POST";
 
       const payload = {
-        participent: form.participant,
-        cycle: form.cycle,
+        participent: Number(form.participant),
+        cycle: Number(form.cycle),
         power: form.power || 0.0,
         voltage: form.voltage || 0.0,
         amperage: form.amperage || 0.0,
       };
+
+      console.log("Submitting payload:", payload);
 
       const res = await fetch(url, {
         method,
@@ -137,7 +154,7 @@ function ParticipantCycleSection() {
       });
 
       const data = await res.json();
-
+      console.log("API response:", res.status, data);
       if (!res.ok || !data.status) {
         console.error(data);
         alert(data.message || "Failed to save allocation");
@@ -179,13 +196,27 @@ function ParticipantCycleSection() {
   const columns = useMemo(
     () => [
       {
+        field: "participent_profile",
+        headerName: "Profile",
+        width: 70,
+        sortable: false,
+        filterable: false,
+        renderCell: (params) => {
+          const row = params.row;
+          return row.participent_profile ? (
+            <Avatar src={row.participent_profile} alt={row.participent_name} sx={{ width: 36, height: 36 }} />
+          ) : (
+            <Avatar sx={{ width: 36, height: 36 }}>
+              {row.participent_name?.[0]?.toUpperCase() || "P"}
+            </Avatar>
+          );
+        },
+      },
+      {
         field: "participent_name",
         headerName: "Participant",
         flex: 1,
         minWidth: 160,
-        renderCell: (params) => (
-          <Typography fontWeight={500}>{params.value}</Typography>
-        ),
       },
       {
         field: "cycle_no",
@@ -213,13 +244,13 @@ function ParticipantCycleSection() {
         headerName: "Actions",
         sortable: false,
         filterable: false,
-        width: 220,
-        align: "right",
-        headerAlign: "right",
+        width: 200,
+        align: "center",
+        headerAlign: "center",
         renderCell: (params) => {
           const row = params.row;
           return (
-            <Stack direction="row" spacing={1} justifyContent="flex-end">
+            <Stack direction="row" spacing={0.5} alignItems="center" justifyContent="center" sx={{ width: "100%", height: "65%" }}>
               <Tooltip title="Edit allocation">
                 <Button
                   variant="outlined"
@@ -263,7 +294,7 @@ function ParticipantCycleSection() {
           title="Participant Cycle Allocation"
           subheader="Allocate cycles to participants and track their power metrics."
           action={
-            <Stack direction="row" spacing={1} alignItems="center">
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: { xs: 1, sm: 0 } }}>
               {loading && <CircularProgress size={20} sx={{ mr: 1 }} />}
               <Button
                 variant="contained"
@@ -278,6 +309,8 @@ function ParticipantCycleSection() {
           }
           sx={{
             pb: 0,
+            flexWrap: "wrap",
+            "& .MuiCardHeader-action": { alignSelf: "center", mt: 0 },
             "& .MuiCardHeader-subheader": {
               fontSize: 13,
               opacity: 0.8,
@@ -287,7 +320,7 @@ function ParticipantCycleSection() {
         <CardContent sx={{ pt: 1 }}>
           <Box
             sx={{
-              height: 420,
+              height: { xs: 360, sm: 420 },
               width: "100%",
               "& .MuiDataGrid-root": {
                 borderRadius: 2,

@@ -1,19 +1,22 @@
-import { app, BrowserWindow, Menu, ipcMain } from "electron";
+import { app, BrowserWindow, Menu, ipcMain,screen  } from "electron";
 import path from "node:path";
 import dns from "node:dns";
 import fs from "node:fs";
 import started from "electron-squirrel-startup";
 import { Server as SocketIOServer } from "socket.io";
-import sqlite from "sqlite3";
+import sqlite from "sqlite3"
+import config from "./config.json";
 
-import IndividualParticipantCache from "./cacheService/IndividualParicipentCache.js";
+// import IndividualParticipantCache from "./cacheService/IndividualParicipentCache.js";
 
 if (started) {
   app.quit();
 }
 
-const REMOTE_HOST = "127.0.0.1:8000";
-const LOCAL_FALLBACK_PORT = 5500;
+const API_BASE= config.apiBase;
+const SOCKET_BASE = config.socketBase;
+//const REMOTE_HOST = "127.0.0.1:8000";
+const LOCAL_FALLBACK_PORT = config.localFallbackPort;
 const CONNECTIVITY_CHECK_HOST = "8.8.8.8";
 const CONNECTIVITY_CHECK_INTERVAL_MS = 5000; // check every 5s in the background
 
@@ -35,8 +38,8 @@ function getNetworkConfig() {
   return isOnline
     ? {
         online: true,
-        apiBase: `http://${REMOTE_HOST}`,
-        socketBase: `http://${REMOTE_HOST}`,
+        apiBase: API_BASE,
+        socketBase: SOCKET_BASE,
       }
     : {
         online: false,
@@ -116,7 +119,7 @@ function initDatabase() {
         `,
         (err2) => {
           if (err2) return reject(err2);
-          participantCache = new IndividualParticipantCache(db);
+          // participantCache = new IndividualParticipantCache(db);
           resolve();
         }
       );
@@ -201,18 +204,20 @@ function registerIPC() {
 /* ---------------- Window / app lifecycle ---------------- */
 
 const createWindow = () => {
+    const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+
   const mainWindow = new BrowserWindow({
     title: "Electricity Power Monitor Admin",
-    width: 1400,
-    height: 900,
-    fullscreen: true,
-    autoHideMenuBar: false,
+    width,height,
+     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
     },
   });
 
   mainWindowRef = mainWindow;
+mainWindow.webContents.openDevTools()
+  // Optional: prevent Alt key from hiding/showing it
 
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
@@ -222,7 +227,6 @@ const createWindow = () => {
     );
   }
 
-  mainWindow.webContents.openDevTools();
 };
 
 app.whenReady().then(async () => {

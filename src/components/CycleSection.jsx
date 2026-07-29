@@ -25,7 +25,7 @@ import DeleteOutlineIcon from "@mui/icons-material/Delete";
 
 const API_BASE = "http://127.0.0.1:8000";
 
-function CycleSection() {
+function CycleSection({onDataChange}) {
   const theme = useTheme(); // access light/dark mode
   const isDark = theme.palette.mode === "dark";
 
@@ -113,6 +113,7 @@ function CycleSection() {
 
       handleClose();
       fetchCycles();
+      onDataChange?.();
     } catch (err) {
       console.error("Error saving cycle:", err);
       alert("Error saving cycle");
@@ -133,6 +134,7 @@ function CycleSection() {
       }
 
       fetchCycles();
+      onDataChange?.();
     } catch (err) {
       console.error("Error deleting cycle:", err);
       alert("Error deleting cycle");
@@ -184,13 +186,13 @@ function CycleSection() {
         headerName: "Actions",
         sortable: false,
         filterable: false,
-        width: 220,
-        align: "right",
-        headerAlign: "right",
+        width: 200,
+        align: "center",
+        headerAlign: "center",
         renderCell: (params) => {
           const row = params.row;
           return (
-            <Stack direction="row" spacing={1} justifyContent="flex-end">
+            <Stack direction="row" spacing={0.5} alignItems="center" justifyContent="center" sx={{ width: "100%", height: "65%" }}>
               <Tooltip title="Edit cycle">
                 <Button
                   variant="outlined"
@@ -239,11 +241,10 @@ function CycleSection() {
         ]}
       >
         <CardHeader
-          title={
-            <Stack direction="row" alignItems="center" spacing={1}>
-              <Typography variant="h6" fontWeight={600}>
-                Cycles
-              </Typography>
+          title="Cycles"
+          subheader={
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 0.5 }}>
+              <span>Manage your cycles like product units with unique identifiers.</span>
               {cycles.length > 0 && (
                 <Chip
                   label={`${cycles.length} total`}
@@ -254,9 +255,8 @@ function CycleSection() {
               )}
             </Stack>
           }
-          subheader="Manage your cycles like product units with unique identifiers."
           action={
-            <Stack direction="row" spacing={1} alignItems="center">
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: { xs: 1, sm: 0 } }}>
               {loading && <CircularProgress size={20} sx={{ mr: 1 }} />}
               <Button
                 variant="contained"
@@ -271,6 +271,8 @@ function CycleSection() {
           }
           sx={{
             pb: 0,
+            flexWrap: "wrap",
+            "& .MuiCardHeader-action": { alignSelf: "center", mt: 0 },
             "& .MuiCardHeader-subheader": {
               fontSize: 13,
               opacity: 0.8,
@@ -280,7 +282,7 @@ function CycleSection() {
         <CardContent sx={{ pt: 1 }}>
           <Box
             sx={{
-              height: 420,
+              height: { xs: 360, sm: 420 },
               width: "100%",
               "& .MuiDataGrid-root": {
                 borderRadius: 2,
