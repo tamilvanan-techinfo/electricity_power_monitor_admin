@@ -128,12 +128,28 @@ const theme = extendTheme({
         root: { borderRadius: 8 },
       },
     },
+    MuiListItemText: {
+      styleOverrides: {
+        primary: { fontFamily: fontBody, fontWeight: 700, fontSize: "0.975rem" },
+        secondary: { fontFamily: fontBody },
+      },
+    },
+    MuiListItemButton: {
+      styleOverrides: {
+        root: { fontFamily: fontBody },
+      },
+    },
+    MuiListSubheader: {
+      styleOverrides: {
+        root: { fontFamily: fontDisplay, fontWeight: 700, fontSize: "0.7rem", letterSpacing: "0.06em", textTransform: "uppercase" },
+      },
+    },
     MuiDataGrid: {
       styleOverrides: {
         root: {
           border: "none",
           fontFamily: fontBody,
-          "& .MuiDataGrid-cell": { fontFamily: fontMono, fontSize: "0.85rem" },
+          "& .MuiDataGrid-cell": { fontFamily: fontMono, fontSize: "0.85rem", display: "flex", alignItems: "center" },
           "& .MuiDataGrid-columnHeaderTitle": {
             fontFamily: fontDisplay,
             fontWeight: 700,

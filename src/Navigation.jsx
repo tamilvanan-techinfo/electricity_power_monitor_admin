@@ -1,6 +1,7 @@
 import React from "react";
 import DashboardIcon from "@mui/icons-material/Dashboard";
-import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
+import TvIcon from '@mui/icons-material/Tv';
+import ScoreboardIcon from '@mui/icons-material/Scoreboard';
 
 const NAVIGATION = [
   {
@@ -15,12 +16,12 @@ const NAVIGATION = [
   {
     segment: "ScreenManager",
     title: "Screen Manager",
-    icon: <ShoppingCartIcon />,
+    icon: <TvIcon />,
   },
   {
     segment: "ManualScoring",
     title: "Manual Scoring",
-    icon: <ShoppingCartIcon />,
+    icon: <ScoreboardIcon />,
   },
 ];
 
