@@ -5,6 +5,7 @@ import fs from "node:fs";
 import started from "electron-squirrel-startup";
 import { Server as SocketIOServer } from "socket.io";
 import sqlite from "sqlite3"
+import config from "./config.json";
 
 // import IndividualParticipantCache from "./cacheService/IndividualParicipentCache.js";
 
@@ -12,8 +13,10 @@ if (started) {
   app.quit();
 }
 
-const REMOTE_HOST = "127.0.0.1:8000";
-const LOCAL_FALLBACK_PORT = 5500;
+const API_BASE= config.apiBase;
+const SOCKET_BASE = config.socketBase;
+//const REMOTE_HOST = "127.0.0.1:8000";
+const LOCAL_FALLBACK_PORT = config.localFallbackPort;
 const CONNECTIVITY_CHECK_HOST = "8.8.8.8";
 const CONNECTIVITY_CHECK_INTERVAL_MS = 5000; // check every 5s in the background
 
@@ -35,8 +38,8 @@ function getNetworkConfig() {
   return isOnline
     ? {
         online: true,
-        apiBase: `http://${REMOTE_HOST}`,
-        socketBase: `http://${REMOTE_HOST}`,
+        apiBase: API_BASE,
+        socketBase: SOCKET_BASE,
       }
     : {
         online: false,

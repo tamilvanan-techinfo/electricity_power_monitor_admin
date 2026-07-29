@@ -6,16 +6,22 @@ import CycleSection from "../components/CycleSection";
 import ParticipantSection from "../components/ParticipantSection";
 import ParticipantCycleSection from "../components/ParticipantCycleSection";
 import LiveDot from "../components/LiveDot";
+import { useState } from "react";
 
 function Dashboard() {
+
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const handleDataChange = () => setRefreshTrigger(prev => prev + 1);
+  
+  
   return (
-    <Box sx={{ p: 3, minHeight: "100vh" }}>
+    <Box sx={{ p: { xs: 1.5, sm: 2, md: 3 }, minHeight: "100vh" }}>
       <Stack
         direction={{ xs: "column", sm: "row" }}
         justifyContent="space-between"
         alignItems={{ xs: "flex-start", sm: "center" }}
         spacing={1.5}
-        sx={{ mb: 3 }}
+        sx={{ mb: { xs: 2, md: 3 } }}
       >
         <Box>
           <Stack direction="row" spacing={1.25} alignItems="center">
@@ -54,12 +60,12 @@ function Dashboard() {
         />
       </Stack>
 
-      <Stack direction={{ xs: "column", lg: "row" }} spacing={3}>
-        <CycleSection />
-        <ParticipantSection />
+      <Stack direction={{ xs: "column", lg: "row" }} spacing={{ xs: 2, md: 3 }}>
+        <CycleSection onDataChange={handleDataChange}/>
+        <ParticipantSection onDataChange={handleDataChange}/>
       </Stack>
-      <Stack sx={{ mt: 3 }}>
-        <ParticipantCycleSection />
+      <Stack sx={{ mt: { xs: 2, md: 3 } }}>
+        <ParticipantCycleSection refreshTrigger={refreshTrigger}/>
       </Stack>
     </Box>
   );

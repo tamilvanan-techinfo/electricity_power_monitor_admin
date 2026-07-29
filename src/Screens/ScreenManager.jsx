@@ -284,14 +284,14 @@ const [screen,setScreen] = useState(null)
   };
 
   return (
-    <Box sx={{ p: 3, minHeight: "100vh", backgroundColor: theme.palette.background.default }}>
+    <Box sx={{ p: { xs: 1.5, sm: 2, md: 3 }, minHeight: "100vh", backgroundColor: theme.palette.background.default }}>
       {/* Header */}
       <Stack
         direction={{ xs: "column", sm: "row" }}
         justifyContent="space-between"
         alignItems={{ xs: "flex-start", sm: "center" }}
         spacing={1.5}
-        sx={{ mb: 3 }}
+        sx={{ mb: { xs: 2, md: 3 } }}
       >
         <Box>
           <Stack direction="row" spacing={1.25} alignItems="center">
@@ -316,7 +316,7 @@ const [screen,setScreen] = useState(null)
           </Typography>
         </Box>
 
-        <Stack direction="row" spacing={1.5} alignItems="center">
+        <Stack direction={{ xs: "row" }} spacing={1} alignItems="center" flexWrap="wrap">
           <Chip
             icon={<LiveDot size={7} color={connected ? tokens.current : theme.palette.text.secondary} sx={{ ml: "6px !important", animation: connected ? "livePulse 2s ease-in-out infinite" : "none" }} />}
             label={connected ? "SOCKET ONLINE" : "RECONNECTING"}
@@ -366,10 +366,10 @@ const [screen,setScreen] = useState(null)
               <ScreenCard islive={screen.is_live ? "true" : "false"}>
                 <CardHeader
                   title={
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <Typography variant="subtitle1" fontWeight={700} noWrap>
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {screen.name}
-                      </Typography>
+                      </span>
                       {screen.is_live && (
                         <Chip
                           icon={<LiveDot size={6} color="#032420" sx={{ ml: "5px !important" }} />}
@@ -388,7 +388,7 @@ const [screen,setScreen] = useState(null)
                           }}
                         />
                       )}
-                    </Box>
+                    </Stack>
                   }
                   subheader={screen.path}
                   sx={{
@@ -442,15 +442,6 @@ const [screen,setScreen] = useState(null)
                 )}
 
                 <CardContent sx={{ flexGrow: 1, pt: screen.thumbnail ? 1.25 : 2 }}>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    noWrap
-                    sx={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.78rem" }}
-                  >
-                    {screen.path}
-                  </Typography>
-
                   <Box sx={{ mt: 1, display: "flex", alignItems: "center", gap: 0.75 }}>
                     <Typography variant="body2" color="text.secondary">
                       Status:
