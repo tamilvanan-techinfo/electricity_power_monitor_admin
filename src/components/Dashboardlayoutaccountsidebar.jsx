@@ -3,17 +3,17 @@ import PropTypes from 'prop-types';
 import { AppProvider } from '@toolpad/core/AppProvider';
 import { DashboardLayout } from '@toolpad/core/DashboardLayout';
 import { DemoProvider } from '@toolpad/core/internal';
-
 import demoTheme from '../Theme';
 import NAVIGATION from '../Navigation';
 import CustomToolbarActions from '../components/Customtoolbaractions';
 import DemoPageContent from '../components/PageDemoContent';
 import SidebarFooterAccount from '../components/SidebarFooterAccount';
-import { UserProvider } from '../contexts/UserContext';
-import { useEffect } from 'react';
+import { UserProvider, useUser } from '../contexts/UserContext';
 import LoginPage from '../Screens/LoginPage';
-function DashboardLayoutAccountSidebar(props) {
-  const { window } = props;
+
+// Inner component — must be inside UserProvider to use useUser()
+function DashboardContent({ window }) {
+  const { user, logout } = useUser();
   const [pathname, setPathname] = React.useState('/dashboard');
 
   const router = React.useMemo(() => {
@@ -24,42 +24,33 @@ function DashboardLayoutAccountSidebar(props) {
     };
   }, [pathname]);
 
-  // Remove this const when copying and pasting into your project.
   const demoWindow = window !== undefined ? window() : undefined;
 
-//   const [session, setSession] = React.useState(demoSession);
-//   const authentication = React.useMemo(() => {
-//     return {
-//       signIn: () => {
-//         setSession(demoSession);
-//       },
-//       signOut: () => {
-//         setSession(null);
-//       },
-//     };
-//   }, []);
-const token = localStorage.getItem('access')
+  const session = user
+    ? { user: { name: user.username, email: user.email, image: null } }
+    : null;
+
+  const authentication = React.useMemo(() => {
+    return {
+      signIn: () => {},
+      signOut: () => { logout(); },
+    };
+  }, [logout]);
+
+  if (!user) return <LoginPage />;
 
   return (
-    // Remove this provider when copying and pasting into your project.
-    token ? (
-        <UserProvider>
-            <DemoProvider window={demoWindow}>
+    <DemoProvider window={demoWindow}>
       <AppProvider
         navigation={NAVIGATION}
         router={router}
         theme={demoTheme}
         window={demoWindow}
-        branding={{
-            title:"Energy Monitoing Admin Panel",
-            logo:null
-  }}
-        // authentication={authentication}
-        // session={session}
+        branding={{ title: "Energy Monitoing Admin Panel", logo: null }}
+        authentication={authentication}
+        session={session}
       >
-        {/* preview-start */}
-        <UserProvider>
-            <DashboardLayout
+        <DashboardLayout
           slots={{
             toolbarActions: CustomToolbarActions,
             sidebarFooter: SidebarFooterAccount,
@@ -67,22 +58,21 @@ const token = localStorage.getItem('access')
         >
           <DemoPageContent pathname={pathname} />
         </DashboardLayout>
-        </UserProvider>
-        {/* preview-end */}
       </AppProvider>
     </DemoProvider>
-        </UserProvider>
-    ) 
-    :
-    <LoginPage/>
+  );
+}
+
+// Outer component — wraps everything in UserProvider (only once)
+function DashboardLayoutAccountSidebar(props) {
+  return (
+    <UserProvider>
+      <DashboardContent window={props.window} />
+    </UserProvider>
   );
 }
 
 DashboardLayoutAccountSidebar.propTypes = {
-  /**
-   * Injected by the documentation to work in an iframe.
-   * Remove this when copying and pasting into your project.
-   */
   window: PropTypes.func,
 };
 

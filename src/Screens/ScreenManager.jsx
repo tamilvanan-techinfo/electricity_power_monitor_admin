@@ -34,8 +34,10 @@ import LiveDot from "../components/LiveDot";
 import { tokens } from "../Theme";
 import ScreenControlDrawer from "../components/ScreenControlDrawer";
 
-const API_BASE = "http://127.0.0.1:8000";
-const WS_URL = "ws://127.0.0.1:8000/ws/screen/admin/";
+import config from "../config.json";
+
+const API_BASE = config.apiBase;
+const WS_URL = `${config.socketBase.replace(/^http/, "ws")}/ws/screen/admin/`;
 
 // Control-panel card: hairline border instead of a drop shadow, teal glow
 // on the currently-live tile so the grid reads like a bank of monitors.
@@ -312,8 +314,7 @@ const [screen,setScreen] = useState(null)
               Screen Manager
             </Typography>
           </Stack>
-          <Typography variant="subtitle1" color="text.secondary" sx={{ mt: 0.5 }}>
-          </Typography>
+          
         </Box>
 
         <Stack direction={{ xs: "row" }} spacing={1} alignItems="center" flexWrap="wrap">

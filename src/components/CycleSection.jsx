@@ -23,7 +23,9 @@ import AddIcon from "@mui/icons-material/Add";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/Delete";
 
-const API_BASE = "http://127.0.0.1:8000";
+import config from "../config.json";
+
+const API_BASE = config.apiBase;
 
 function CycleSection({onDataChange}) {
   const theme = useTheme(); // access light/dark mode

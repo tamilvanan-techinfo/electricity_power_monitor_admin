@@ -1,5 +1,5 @@
 {
-  "apiBase": "http://127.0.0.1:8000",
-  "socketBase": "http://127.0.0.1:8000",
+  "apiBase": "http://192.168.1.23:8000",
+  "socketBase": "http://192.168.1.23:8000",
   "localFallbackPort": 5500
 }
