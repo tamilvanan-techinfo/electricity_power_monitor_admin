@@ -104,7 +104,7 @@ const theme = extendTheme({
     MuiButton: {
       defaultProps: { disableElevation: true },
       styleOverrides: {
-        root: { borderRadius: 8, paddingInline: 16 },
+        root: { borderRadius: 8, paddingInline: 16, fontFamily: fontDisplay, fontWeight: 700 },
         contained: ({ theme }) => ({
           "&:hover": {
             boxShadow:
@@ -130,18 +130,38 @@ const theme = extendTheme({
     },
     MuiListItemText: {
       styleOverrides: {
-        primary: { fontFamily: fontBody, fontWeight: 700, fontSize: "0.975rem" },
-        secondary: { fontFamily: fontBody },
+        primary: { fontFamily: fontMono, fontWeight: 600, fontSize: "0.875rem" },
+        secondary: { fontFamily: fontMono },
       },
     },
     MuiListItemButton: {
       styleOverrides: {
-        root: { fontFamily: fontBody },
+        root: { fontFamily: fontMono },
       },
     },
     MuiListSubheader: {
       styleOverrides: {
-        root: { fontFamily: fontDisplay, fontWeight: 700, fontSize: "0.7rem", letterSpacing: "0.06em", textTransform: "uppercase" },
+        root: { fontFamily: fontMono, fontWeight: 700, fontSize: "0.7rem", letterSpacing: "0.06em", textTransform: "uppercase" },
+      },
+    },
+    MuiFormControlLabel: {
+      styleOverrides: {
+        label: { fontFamily: fontBody, fontWeight: 500, fontSize: "0.9rem" },
+      },
+    },
+    MuiTooltip: {
+      styleOverrides: {
+        tooltip: { fontFamily: fontBody, fontSize: "0.78rem", fontWeight: 500 },
+      },
+    },
+    MuiInputLabel: {
+      styleOverrides: {
+        root: { fontFamily: fontBody },
+      },
+    },
+    MuiFormHelperText: {
+      styleOverrides: {
+        root: { fontFamily: fontBody },
       },
     },
     MuiDataGrid: {

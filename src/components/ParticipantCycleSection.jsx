@@ -25,8 +25,10 @@ import AddIcon from "@mui/icons-material/Add";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/Delete";
 
-const API_BASE = "http://127.0.0.1:8000";
-const MEDIA_BASE = API_BASE;
+import config from "../config.json";
+
+const API_BASE = config.apiBase;
+const MEDIA_BASE = config.apiBase;
 
 function ParticipantCycleSection({refreshTrigger}) {
   const theme = useTheme();

@@ -1,0 +1,52 @@
+/* Force app fonts globally — MUI Portals (Tooltip, Popper) render outside
+   the CssVarsProvider tree so theme styleOverrides don't reach them. */
+
+.MuiTooltip-tooltip {
+  font-family: 'IBM Plex Mono', sans-serif !important;
+  font-size: 0.78rem !important;
+  font-weight: 500 !important;
+}
+
+.MuiInputLabel-root {
+  font-family: 'IBM Plex Mono', sans-serif !important;
+}
+
+.MuiFormHelperText-root {
+  font-family: 'IBM Plex Mono', sans-serif !important;
+}
+
+.MuiFormControlLabel-label {
+  font-family: 'IBM Plex Mono', sans-serif !important;
+  font-weight: 500 !important;
+  font-size: 0.9rem !important;
+}
+
+.MuiButton-root {
+  font-family: 'IBM Plex Mono', monospace !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase !important;
+}
+.MuiTablePagination-selectLabel,
+.MuiTablePagination-displayedRows,
+.MuiTablePagination-select,
+.MuiTablePagination-menuItem {
+  font-family: 'IBM Plex Mono', monospace !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.04em !important;
+  font-size: 0.75rem !important;
+}
+
+.MuiListItemText-primary {
+  font-family: 'IBM Plex Mono', monospace !important;
+  font-weight: 600 !important;
+  font-size: 0.875rem !important;
+}
+
+.MuiListSubheader-root {
+  font-family: 'IBM Plex Mono', monospace !important;
+  font-weight: 700 !important;
+  font-size: 0.7rem !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+}

@@ -48,9 +48,9 @@ function SectionLabel({ children }) {
   return (
     <Typography
       sx={{
-        fontFamily: "'IBM Plex Mono', monospace",
+        fontFamily: "'Manrope', sans-serif",
         fontSize: "0.7rem",
-        fontWeight: 600,
+        fontWeight: 700,
         letterSpacing: "0.08em",
         textTransform: "uppercase",
         color: "text.secondary",
@@ -135,6 +135,8 @@ function ScreenControlDrawer({ open, onClose, onApply, socket, screen }) {
         fontFamily: "'IBM Plex Mono', monospace",
         fontSize: "0.9rem",
       },
+      "& .MuiInputLabel-root": { fontFamily: "'Inter', sans-serif" },
+      "& .MuiInputAdornment-root": { fontFamily: "'IBM Plex Mono', monospace", fontSize: "0.8rem" },
     }),
     []
   );
@@ -188,7 +190,7 @@ function ScreenControlDrawer({ open, onClose, onApply, socket, screen }) {
             >
               Screen Control
             </Typography>
-            <Typography variant="body2" color="text.secondary" noWrap>
+            <Typography variant="body2" color="text.secondary" sx={{ fontFamily: "'Inter', sans-serif", fontSize: "0.82rem" }}>
               {screen?.name ? `Configuring "${screen.name}"` : "Configure the Electron display window"}
             </Typography>
           </Box>
@@ -252,7 +254,7 @@ function ScreenControlDrawer({ open, onClose, onApply, socket, screen }) {
           <Stack spacing={0.5}>
             <SectionLabel>Window Behavior</SectionLabel>
             <FormControlLabel
-              sx={{ ml: 0, justifyContent: "space-between" }}
+              sx={{ ml: 0, justifyContent: "space-between", "& .MuiFormControlLabel-label": { fontFamily: "'Manrope', sans-serif", fontWeight: 700, fontSize: "0.7rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "text.secondary" } }}
               labelPlacement="start"
               control={
                 <Switch
@@ -263,7 +265,7 @@ function ScreenControlDrawer({ open, onClose, onApply, socket, screen }) {
               label="Fullscreen"
             />
             <FormControlLabel
-              sx={{ ml: 0, justifyContent: "space-between" }}
+              sx={{ ml: 0, justifyContent: "space-between", "& .MuiFormControlLabel-label": { fontFamily: "'Manrope', sans-serif", fontWeight: 700, fontSize: "0.7rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "text.secondary" } }}
               labelPlacement="start"
               control={
                 <Switch

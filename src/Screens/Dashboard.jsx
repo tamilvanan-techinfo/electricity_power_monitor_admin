@@ -19,7 +19,7 @@ function Dashboard() {
       <Stack
         direction={{ xs: "column", sm: "row" }}
         justifyContent="space-between"
-        alignItems={{ xs: "flex-start", sm: "center" }}
+        alignItems="center"
         spacing={1.5}
         sx={{ mb: { xs: 2, md: 3 } }}
       >
@@ -42,7 +42,6 @@ function Dashboard() {
               Admin Dashboard
             </Typography>
           </Stack>
-        
         </Box>
 
         <Chip
