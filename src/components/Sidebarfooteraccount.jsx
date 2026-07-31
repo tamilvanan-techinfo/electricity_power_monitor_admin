@@ -9,6 +9,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import { Account, AccountPopoverFooter } from '@toolpad/core/Account';
 import AccountSidebarPreview from './AccountSidebarPreview';
 import config from '../config.json';
+import ScreenControlPanel from './ScreenControlDrawer'
 
 function SidebarFooterAccountPopover() {
   const [loading, setLoading] = React.useState(false);
@@ -69,7 +70,9 @@ const createPreviewComponent = (mini) => {
 export default function SidebarFooterAccount({ mini }) {
   const PreviewComponent = React.useMemo(() => createPreviewComponent(mini), [mini]);
   return (
-    <Account
+    <>
+    <ScreenControlPanel/>
+    {/* <Account
       slots={{
         preview: PreviewComponent,
         popoverContent: SidebarFooterAccountPopover,
@@ -91,7 +94,7 @@ export default function SidebarFooterAccount({ mini }) {
                   content: '""',
                   display: 'block',
                   position: 'absolute',
-                  bottom: 10,
+                  bottom: 0,
                   left: 0,
                   width: 10,
                   height: 10,
@@ -104,7 +107,8 @@ export default function SidebarFooterAccount({ mini }) {
           },
         },
       }}
-    />
+    /> */}
+    </>
   );
 }
 
