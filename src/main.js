@@ -72,21 +72,8 @@ function startConnectivityWatcher() {
 /* ---------------- SQLite ---------------- */
 
 function getDatabasePath() {
-  const dbPath = process.env.GO_GREEN_DB_PATH;
-
-  if (!dbPath) {
-    throw new Error("GO_GREEN_DB_PATH environment variable is not set.");
-  }
-
-  const dir = path.dirname(dbPath);
-
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-
-  return dbPath;
+  return path.join(app.getPath("userData"), "cache.db");
 }
-
 function ensureDatabaseFile() {
   const dbPath = getDatabasePath();
   const dir = path.dirname(dbPath);
