@@ -17,6 +17,7 @@ import {
   Typography,
   TextField,
   MenuItem,
+  Avatar
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { DataGrid } from "@mui/x-data-grid";
@@ -28,7 +29,6 @@ import config from "../config.json";
 
 const API_BASE = config.apiBase;
 const MEDIA_BASE = config.apiBase;
-const MEDIA_BASE = API_BASE;
 
 function ParticipantCycleSection({refreshTrigger}) {
   const theme = useTheme();
