@@ -9,30 +9,25 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import { Account, AccountPopoverFooter } from '@toolpad/core/Account';
 import AccountSidebarPreview from './AccountSidebarPreview';
 import config from '../config.json';
+import ScreenControlPanel from './ScreenControlDrawer'
 
 function SidebarFooterAccountPopover() {
   const [loading, setLoading] = React.useState(false);
 
   const handleLogout = async () => {
+    console.log('Logout button clicked');
     setLoading(true);
-    const refresh = localStorage.getItem('refresh');
     try {
-      await fetch(`${config.apiBase}/api/admin/logout/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh }),
-      });
-    } catch (err) {
-      console.error('Logout request failed:', err);
-    } finally {
-      // Fail-safe — always clear and redirect regardless of API result
       localStorage.removeItem('access');
       localStorage.removeItem('refresh');
       localStorage.removeItem('user_id');
       localStorage.removeItem('username');
       localStorage.removeItem('email');
-      window.location.href = '/login';
-    }
+      window.location.reload()
+
+    } catch (err) {
+      console.error('Logout request failed:', err);
+    } 
   };
 
   return (
@@ -69,7 +64,9 @@ const createPreviewComponent = (mini) => {
 export default function SidebarFooterAccount({ mini }) {
   const PreviewComponent = React.useMemo(() => createPreviewComponent(mini), [mini]);
   return (
-    <Account
+    <>
+    <ScreenControlPanel/>
+    {/* <Account
       slots={{
         preview: PreviewComponent,
         popoverContent: SidebarFooterAccountPopover,
@@ -91,7 +88,7 @@ export default function SidebarFooterAccount({ mini }) {
                   content: '""',
                   display: 'block',
                   position: 'absolute',
-                  bottom: 10,
+                  bottom: 0,
                   left: 0,
                   width: 10,
                   height: 10,
@@ -104,7 +101,8 @@ export default function SidebarFooterAccount({ mini }) {
           },
         },
       }}
-    />
+    /> */}
+    </>
   );
 }
 

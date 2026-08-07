@@ -1,5 +1,4 @@
-// src/pages/ScreenManager.jsx
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Box,
   Grid,
@@ -32,12 +31,11 @@ import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/Delete";
 import LiveDot from "../components/LiveDot";
 import { tokens } from "../Theme";
-import ScreenControlDrawer from "../components/ScreenControlDrawer";
+import { useSocket } from "../contexts/SocketContext";
+import PlayerControllerDrawer from "../components/PlayerControllerDrawer";
+import GroupHandlingDrawer from "../components/GroupHandlingDrawer";
 
-import config from "../config.json";
-
-const API_BASE = config.apiBase;
-const WS_URL = `${config.socketBase.replace(/^http/, "ws")}/ws/screen/admin/`;
+const API_BASE = "http://127.0.0.1:8000";
 
 // Control-panel card: hairline border instead of a drop shadow, teal glow
 // on the currently-live tile so the grid reads like a bank of monitors.
@@ -59,16 +57,14 @@ const ScreenCard = styled("div")(({ theme, islive }) => ({
 function ScreenManager() {
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
-const [drawerOpen, setDrawerOpen] = useState(false);
-const [screen,setScreen] = useState(null)
-  const [screens, setScreens] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [connected, setConnected] = useState(false);
 
-  const wsRef = useRef(null);
-  const shouldReconnect = useRef(true);
-  const reconnectAttempts = useRef(0);
-  const reconnectTimeoutRef = useRef(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerGroupOpen, setDrawerGroupOpen] = useState(false);
+  const [screen, setScreen] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  // Socket state/actions now come from context
+  const { screens, setScreens, connected, send } = useSocket();
 
   const [formOpen, setFormOpen] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
@@ -82,13 +78,6 @@ const [screen,setScreen] = useState(null)
 
   useEffect(() => {
     fetchScreens();
-    connectWebSocket();
-
-    return () => {
-      shouldReconnect.current = false;
-      clearTimeout(reconnectTimeoutRef.current);
-      if (wsRef.current) wsRef.current.close();
-    };
   }, []);
 
   const fetchScreens = async () => {
@@ -102,68 +91,6 @@ const [screen,setScreen] = useState(null)
       alert("Failed to load screens");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const connectWebSocket = () => {
-    try {
-      const socket = new WebSocket(WS_URL);
-      wsRef.current = socket;
-
-      socket.onopen = () => {
-        console.log("Screen WebSocket connected");
-        reconnectAttempts.current = 0;
-        setConnected(true);
-      };
-
-      socket.onmessage = (event) => {
-        try {
-          const msg = JSON.parse(event.data);
-
-          if (msg.type === "update" && msg.screen) {
-            setScreens((prev) =>
-              prev.map((s) => (s.id === msg.screen.id ? msg.screen : s))
-            );
-          } else if (msg.type === "create" && msg.screen) {
-            setScreens((prev) => [...prev, msg.screen]);
-          } else if (msg.type === "delete" && msg.id) {
-            setScreens((prev) => prev.filter((s) => s.id !== msg.id));
-          }
-        } catch (e) {
-          console.error("Error parsing WS message:", e);
-        }
-      };
-
-      socket.onclose = (event) => {
-        console.log("Screen WebSocket closed", event.code);
-        setConnected(false);
-
-        if (!shouldReconnect.current) return;
-
-        reconnectAttempts.current += 1;
-
-        // Exponential backoff (max 30 seconds)
-        const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
-
-        console.log(`Reconnecting in ${delay / 1000}s...`);
-
-        reconnectTimeoutRef.current = setTimeout(() => {
-          connectWebSocket();
-        }, delay);
-      };
-
-      socket.onerror = (err) => {
-        console.error("Screen WebSocket error:", err);
-        socket.close();
-      };
-    } catch (err) {
-      console.error("Failed to connect WebSocket:", err);
-
-      if (shouldReconnect.current) {
-        reconnectTimeoutRef.current = setTimeout(() => {
-          connectWebSocket();
-        }, 5000);
-      }
     }
   };
 
@@ -256,7 +183,7 @@ const [screen,setScreen] = useState(null)
     }
   };
 
-  // Toggle live status for one screen
+  // Toggle live status for one screen — now uses `send` from context
   const handleToggleLive = async (screen) => {
     try {
       const newIsLive = !screen.is_live;
@@ -270,15 +197,11 @@ const [screen,setScreen] = useState(null)
         })
       );
 
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.send(
-          JSON.stringify({
-            type: "set_live_screen",
-            screen_id: screen.id,
-            is_live: newIsLive,
-          })
-        );
-      }
+      send({
+        type: "set_live_screen",
+        screen_id: screen.id,
+        is_live: newIsLive,
+      });
     } catch (err) {
       console.error("Error toggling live status:", err);
       alert("Error toggling live status");
@@ -314,7 +237,8 @@ const [screen,setScreen] = useState(null)
               Screen Manager
             </Typography>
           </Stack>
-          
+          <Typography variant="subtitle1" color="text.secondary" sx={{ mt: 0.5 }}>
+          </Typography>
         </Box>
 
         <Stack direction={{ xs: "row" }} spacing={1} alignItems="center" flexWrap="wrap">
@@ -459,26 +383,36 @@ const [screen,setScreen] = useState(null)
                 <CardActions sx={{ px: 2, pb: 2, pt: 0 }}>
                   {screen.is_live ? (
                     <>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      color="inherit"
-                      startIcon={<StopCircleOutlinedIcon />}
-                      onClick={() => handleToggleLive(screen)}
-                      fullWidth
-                    >
-                      Stop Live
-                    </Button>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      color="inherit"
-                      
-                      onClick={() => {setDrawerOpen(true);setScreen(screen)}}
-                      fullWidth
-                    >
-                      Control Screen
-                    </Button>
+                    {console.log("Screen is live:", screen)}
+                      {/* <Button
+                        size="small"
+                        variant="outlined"
+                        color="inherit"
+                        startIcon={<StopCircleOutlinedIcon />}
+                        onClick={() => handleToggleLive(screen)}
+                        fullWidth
+                      >
+                        Stop Live
+                      </Button> */}
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="inherit"
+                        onClick={() => {
+                          if (screen.path === "/player-analysis" || screen.path === "/live-barchart" ) {
+                            setDrawerOpen(true);
+                            setScreen(screen);
+                          }
+                          else if (screen.path === "/group-participants") {
+                            setDrawerGroupOpen(true);
+                            setScreen(screen);
+
+                          } 
+                        }}
+                        fullWidth
+                      >
+                        Control Screen
+                      </Button>
                     </>
                   ) : (
                     <Button
@@ -499,27 +433,18 @@ const [screen,setScreen] = useState(null)
         </Grid>
       )}
       {/* Drawer for the Screen Controller */}
-      <ScreenControlDrawer
-      screen={screen}
-  open={drawerOpen}
-  onClose={() => setDrawerOpen(false)}
-  socket={wsRef}
-  onApply={(data) => {
-    console.log(data);
-
-    // Send to backend/WebSocket
-    // {
-    //   width,
-    //   height,
-    //   x,
-    //   y,
-    //   marginLeft,
-    //   fullscreen,
-    //   alwaysOnTop,
-    //   resizable
-    // }
-  }}
-/>
+      <PlayerControllerDrawer
+        open={drawerOpen}
+        onClose={() => {
+          setDrawerOpen(false);
+          setScreen(null);
+        }}
+        screen={screen}
+      />
+    <GroupHandlingDrawer
+    open={drawerGroupOpen}
+    onClose={() => setDrawerGroupOpen(false)}
+  />
 
       {/* Add/Edit dialog */}
       <Dialog open={formOpen} onClose={closeDialog} fullWidth maxWidth="sm">

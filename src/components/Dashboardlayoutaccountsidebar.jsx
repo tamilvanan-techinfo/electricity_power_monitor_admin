@@ -1,3 +1,4 @@
+// DashboardLayoutAccountSidebar.jsx
 import * as React from 'react';
 import PropTypes from 'prop-types';
 import { AppProvider } from '@toolpad/core/AppProvider';
@@ -10,6 +11,12 @@ import DemoPageContent from '../components/PageDemoContent';
 import SidebarFooterAccount from '../components/SidebarFooterAccount';
 import { UserProvider, useUser } from '../contexts/UserContext';
 import LoginPage from '../Screens/LoginPage';
+import FloatingWebviewPanel from '../components/FloatingWebviewPanel';
+import logo from "../asstes/logo.png";
+
+// The route your Electron app (and the LED screen itself) renders the
+// live display on — mirrored in the floating panel.
+const DISPLAY_URL = 'http://localhost:5173/';
 
 // Inner component — must be inside UserProvider to use useUser()
 function DashboardContent({ window }) {
@@ -46,9 +53,10 @@ function DashboardContent({ window }) {
         router={router}
         theme={demoTheme}
         window={demoWindow}
-        branding={{ title: "Energy Monitoing Admin Panel", logo: null }}
+        branding={{ title: "Energy Monitoing Admin Panel", logo:  <img src={logo} alt="logo" style={{ height: 32 }} /> }}
         authentication={authentication}
         session={session}
+        
       >
         <DashboardLayout
           slots={{
@@ -58,6 +66,11 @@ function DashboardContent({ window }) {
         >
           <DemoPageContent pathname={pathname} />
         </DashboardLayout>
+
+        {/* Floating, draggable mini live-preview — sits above the layout,
+            persists across route changes since it's rendered outside
+            DemoPageContent. */}
+        <FloatingWebviewPanel src={DISPLAY_URL} title="Live Display" />
       </AppProvider>
     </DemoProvider>
   );

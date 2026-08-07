@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Drawer,
+  Paper,
   Box,
   Typography,
   TextField,
@@ -13,22 +13,54 @@ import {
   InputAdornment,
   Chip,
   Tooltip,
+  CircularProgress,
 } from "@mui/material";
 import TuneIcon from "@mui/icons-material/Tune";
-import CloseIcon from "@mui/icons-material/Close";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import { tokens } from "../Theme";
+import { useSocket } from "../contexts/SocketContext";
 
-// Fields this drawer edits, and how each maps onto the `screen` object's
-// keys. Only these are read from `screen` / sent back out — the screen
-// carries other fields (id, thumbnail, is_live, menu_bar_visible, ...)
-// that aren't part of this form.
-const FIELD_KEYS = ["width", "height", "x", "y", "fullscreen", "alwaysOnTop"];
-const SCREEN_KEY_MAP = { alwaysOnTop: "always_on_top" };
-const NUMERIC_FIELDS = new Set(["width", "height", "x", "y"]);
+// ---- Config the component owns internally ----
+const SCREEN_API_URL = "http://127.0.0.1:8000/screens/screen-position/";
 
-// Builds the form's initial state from whatever the screen currently has,
-// falling back to sane defaults for a screen that hasn't been configured yet.
+// Fields this panel edits, and how each maps onto the `screen` object's
+// keys. Only these are read from `screen` / sent back out.
+const FIELD_KEYS = [
+  "width",
+  "height",
+  "x",
+  "y",
+  "fullscreen",
+  "alwaysOnTop",
+  "resizable",
+  "movable",
+  "minimizable",
+  "maximizable",
+  "visible",
+  "menuBarVisible",
+  "autoHideMenuBar",
+  "opacity",
+];
+
+const SCREEN_KEY_MAP = {
+  alwaysOnTop: "always_on_top",
+  menuBarVisible: "menu_bar_visible",
+  autoHideMenuBar: "auto_hide_menu_bar",
+};
+
+const NUMERIC_FIELDS = new Set(["width", "height", "x", "y", "opacity"]);
+const BOOLEAN_FIELDS = new Set([
+  "fullscreen",
+  "alwaysOnTop",
+  "resizable",
+  "movable",
+  "minimizable",
+  "maximizable",
+  "visible",
+  "menuBarVisible",
+  "autoHideMenuBar",
+]);
+
 function formFromScreen(screen) {
   const get = (key) => screen?.[SCREEN_KEY_MAP[key] || key];
 
@@ -39,11 +71,17 @@ function formFromScreen(screen) {
     y: get("y") ?? "",
     fullscreen: get("fullscreen") ?? false,
     alwaysOnTop: get("alwaysOnTop") ?? false,
+    resizable: get("resizable") ?? true,
+    movable: get("movable") ?? true,
+    minimizable: get("minimizable") ?? true,
+    maximizable: get("maximizable") ?? true,
+    visible: get("visible") ?? true,
+    menuBarVisible: get("menuBarVisible") ?? false,
+    autoHideMenuBar: get("autoHideMenuBar") ?? true,
+    opacity: get("opacity") ?? 1,
   };
 }
 
-// Small section label used to group related fields — reads like a panel
-// legend rather than another plain divider.
 function SectionLabel({ children }) {
   return (
     <Typography
@@ -61,18 +99,74 @@ function SectionLabel({ children }) {
   );
 }
 
-function ScreenControlDrawer({ open, onClose, onApply, socket, screen }) {
+function ToggleRow({ label, checked, onChange }) {
+  return (
+    <FormControlLabel
+      sx={{
+        ml: 0,
+        justifyContent: "space-between",
+        "& .MuiFormControlLabel-label": {
+          fontFamily: "'Manrope', sans-serif",
+          fontWeight: 700,
+          fontSize: "0.65rem",
+          letterSpacing: "0.08em",
+          textTransform: "uppercase",
+          color: "text.secondary",
+        },
+      }}
+      labelPlacement="start"
+      control={<Switch checked={checked} onChange={(e) => onChange(e.target.checked)} />}
+      label={label}
+    />
+  );
+}
+
+// Fetches its own initial screen data via REST, but uses the shared
+// SocketContext connection (via `send`) instead of owning its own socket.
+function ScreenControlPanel() {
+  const { connected, send, controlledScreen, setControlledScreen } = useSocket();
+
+  const [screen, setScreen] = useState(null);
+  const [loading, setLoading] = useState(true);
+
   const initialForm = useMemo(() => formFromScreen(screen), [screen]);
 
   const [form, setForm] = useState(initialForm);
-  // The comparison baseline — NOT fixed to the screen's original values.
-  // It starts there, but every successful Apply moves it forward to
-  // whatever was just applied, so those values become "current" and the
-  // Apply button goes back to disabled until the next real edit.
   const [baseline, setBaseline] = useState(initialForm);
 
-  // Re-sync both the form and the baseline whenever a different screen is
-  // opened, so fields start at that screen's actual current state.
+  // ---- fetch the screen's current state on mount ----
+  useEffect(() => {
+    let active = true;
+
+    (async () => {
+      try {
+        const res = await fetch(SCREEN_API_URL);
+        if (!res.ok) throw new Error(`Failed to fetch screen: ${res.status}`);
+        const data = await res.json();
+        if (active) {
+          setScreen(data);
+          setControlledScreen(data);
+        }
+      } catch (err) {
+        console.warn("Could not fetch screen data:", err);
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Keep local `screen` in sync with acks coming through the shared socket
+  useEffect(() => {
+    if (controlledScreen) {
+      setScreen(controlledScreen);
+    }
+  }, [controlledScreen]);
+
   useEffect(() => {
     setForm(initialForm);
     setBaseline(initialForm);
@@ -86,8 +180,6 @@ function ScreenControlDrawer({ open, onClose, onApply, socket, screen }) {
     setForm(baseline);
   }, [baseline]);
 
-  // Fields whose current form value differs from the baseline — this is
-  // both what enables the Apply button and what gets sent.
   const changedProperties = useMemo(() => {
     const out = {};
     for (const key of FIELD_KEYS) {
@@ -116,18 +208,10 @@ function ScreenControlDrawer({ open, onClose, onApply, socket, screen }) {
       properties: changedProperties,
     };
 
-    if (socket?.current?.readyState === WebSocket.OPEN) {
-      socket.current.send(JSON.stringify(payload));
-    } else {
-      console.warn("Screen control socket is not open — could not send:", payload);
-    }
+    send(payload);
 
-    if (onApply) onApply(changedProperties);
-
-    // The just-applied values are now "current" — move the baseline up to
-    // them so Apply disables again until the next edit.
     setBaseline(form);
-  }, [hasChanges, changedProperties, socket, onApply, screen, form]);
+  }, [hasChanges, changedProperties, screen, form, send]);
 
   const numberFieldSx = useMemo(
     () => ({
@@ -141,23 +225,32 @@ function ScreenControlDrawer({ open, onClose, onApply, socket, screen }) {
     []
   );
 
-  return (
-    <Drawer
-      anchor="right"
-      open={open}
-      onClose={onClose}
-      // The dashboard's own AppBar/sidebar chrome can render at a z-index
-      // above MUI's default modal layer, which pushes this drawer's header
-      // behind it. Force the drawer well above everything in the layout.
-      sx={{ zIndex: (theme) => theme.zIndex.modal + 100 }}
-      PaperProps={{
-        sx: {
-          width: 400,
-          borderLeft: (theme) => `1px solid ${theme.palette.divider}`,
-          zIndex: (theme) => theme.zIndex.modal + 100,
+  if (loading) {
+    return (
+      <Paper
+        variant="outlined"
+        sx={{
+          width: "100%",
+          borderRadius: 2,
+          p: 4,
           display: "flex",
-          flexDirection: "column",
-        },
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <CircularProgress size={28} />
+      </Paper>
+    );
+  }
+
+  return (
+    <Paper
+      variant="outlined"
+      sx={{
+        width: "100%",
+        display: "flex",
+        flexDirection: "column",
+        borderRadius: 2,
       }}
     >
       <Box
@@ -186,19 +279,25 @@ function ScreenControlDrawer({ open, onClose, onApply, socket, screen }) {
           </Box>
           <Box sx={{ minWidth: 0 }}>
             <Typography
-              sx={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: "1.1rem", lineHeight: 1.25 }}
+              sx={{ fontFamily: "'Manrope', sans-serif", fontWeight: 500, fontSize: "1.1rem", lineHeight: 1.25 }}
             >
               Screen Control
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ fontFamily: "'Inter', sans-serif", fontSize: "0.82rem" }}>
-              {screen?.name ? `Configuring "${screen.name}"` : "Configure the Electron display window"}
             </Typography>
           </Box>
         </Stack>
 
-        <IconButton size="small" onClick={onClose}>
-          <CloseIcon fontSize="small" />
-        </IconButton>
+        <Chip
+          size="small"
+          label={connected ? "Live" : "Reconnecting…"}
+          sx={{
+            fontFamily: "'IBM Plex Mono', monospace",
+            fontWeight: 600,
+            fontSize: "0.65rem",
+            bgcolor: connected ? "rgba(63,185,80,0.12)" : "rgba(248,81,73,0.12)",
+            color: connected ? "#2E9E4F" : "#D9463D",
+            border: "none",
+          }}
+        />
       </Box>
 
       <Divider />
@@ -212,6 +311,7 @@ function ScreenControlDrawer({ open, onClose, onApply, socket, screen }) {
                 label="Width"
                 fullWidth
                 size="small"
+                type="number"
                 value={form.width}
                 onChange={(e) => handleChange("width", e.target.value)}
                 sx={numberFieldSx}
@@ -221,6 +321,7 @@ function ScreenControlDrawer({ open, onClose, onApply, socket, screen }) {
                 label="Height"
                 fullWidth
                 size="small"
+                type="number"
                 value={form.height}
                 onChange={(e) => handleChange("height", e.target.value)}
                 sx={numberFieldSx}
@@ -236,6 +337,7 @@ function ScreenControlDrawer({ open, onClose, onApply, socket, screen }) {
                 label="Position X"
                 fullWidth
                 size="small"
+                type="number"
                 value={form.x}
                 onChange={(e) => handleChange("x", e.target.value)}
                 sx={numberFieldSx}
@@ -244,6 +346,7 @@ function ScreenControlDrawer({ open, onClose, onApply, socket, screen }) {
                 label="Position Y"
                 fullWidth
                 size="small"
+                type="number"
                 value={form.y}
                 onChange={(e) => handleChange("y", e.target.value)}
                 sx={numberFieldSx}
@@ -251,42 +354,27 @@ function ScreenControlDrawer({ open, onClose, onApply, socket, screen }) {
             </Stack>
           </Stack>
 
+     
+
           <Stack spacing={0.5}>
             <SectionLabel>Window Behavior</SectionLabel>
-            <FormControlLabel
-              sx={{ ml: 0, justifyContent: "space-between", "& .MuiFormControlLabel-label": { fontFamily: "'Manrope', sans-serif", fontWeight: 700, fontSize: "0.7rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "text.secondary" } }}
-              labelPlacement="start"
-              control={
-                <Switch
-                  checked={form.fullscreen}
-                  onChange={(e) => handleChange("fullscreen", e.target.checked)}
-                />
-              }
+            <ToggleRow
               label="Fullscreen"
+              checked={form.fullscreen}
+              onChange={(v) => handleChange("fullscreen", v)}
             />
-            <FormControlLabel
-              sx={{ ml: 0, justifyContent: "space-between", "& .MuiFormControlLabel-label": { fontFamily: "'Manrope', sans-serif", fontWeight: 700, fontSize: "0.7rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "text.secondary" } }}
-              labelPlacement="start"
-              control={
-                <Switch
-                  checked={form.alwaysOnTop}
-                  onChange={(e) => handleChange("alwaysOnTop", e.target.checked)}
-                />
-              }
+            <ToggleRow
               label="Always On Top"
+              checked={form.alwaysOnTop}
+              onChange={(v) => handleChange("alwaysOnTop", v)}
             />
-            {/* <FormControlLabel
-              sx={{ ml: 0, justifyContent: "space-between" }}
-              labelPlacement="start"
-              control={
-                <Switch
-                  checked={form.resizable}
-                  onChange={(e) => handleChange("resizable", e.target.checked)}
-                />
-              }
-              label="Resizable"
-            /> */}
+          
+          
+            
+           
           </Stack>
+
+         
         </Stack>
       </Box>
 
@@ -341,8 +429,8 @@ function ScreenControlDrawer({ open, onClose, onApply, socket, screen }) {
           </Button>
         </Stack>
       </Box>
-    </Drawer>
+    </Paper>
   );
 }
 
-export default ScreenControlDrawer;
+export default ScreenControlPanel;
