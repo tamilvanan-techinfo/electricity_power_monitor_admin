@@ -33,6 +33,7 @@ import LiveDot from "../components/LiveDot";
 import { tokens } from "../Theme";
 import { useSocket } from "../contexts/SocketContext";
 import PlayerControllerDrawer from "../components/PlayerControllerDrawer";
+import GroupHandlingDrawer from "../components/GroupHandlingDrawer";
 
 const API_BASE = "http://127.0.0.1:8000";
 
@@ -58,6 +59,7 @@ function ScreenManager() {
   const isDark = theme.palette.mode === "dark";
 
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerGroupOpen, setDrawerGroupOpen] = useState(false);
   const [screen, setScreen] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -381,7 +383,8 @@ function ScreenManager() {
                 <CardActions sx={{ px: 2, pb: 2, pt: 0 }}>
                   {screen.is_live ? (
                     <>
-                      <Button
+                    {console.log("Screen is live:", screen)}
+                      {/* <Button
                         size="small"
                         variant="outlined"
                         color="inherit"
@@ -390,14 +393,21 @@ function ScreenManager() {
                         fullWidth
                       >
                         Stop Live
-                      </Button>
+                      </Button> */}
                       <Button
                         size="small"
                         variant="outlined"
                         color="inherit"
                         onClick={() => {
-                          setDrawerOpen(true);
-                          setScreen(screen);
+                          if (screen.path === "/player-analysis" || screen.path === "/live-barchart" ) {
+                            setDrawerOpen(true);
+                            setScreen(screen);
+                          }
+                          else if (screen.path === "/group-participants") {
+                            setDrawerGroupOpen(true);
+                            setScreen(screen);
+
+                          } 
                         }}
                         fullWidth
                       >
@@ -431,6 +441,10 @@ function ScreenManager() {
         }}
         screen={screen}
       />
+    <GroupHandlingDrawer
+    open={drawerGroupOpen}
+    onClose={() => setDrawerGroupOpen(false)}
+  />
 
       {/* Add/Edit dialog */}
       <Dialog open={formOpen} onClose={closeDialog} fullWidth maxWidth="sm">

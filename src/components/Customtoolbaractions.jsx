@@ -8,12 +8,15 @@ export default function CustomToolbarActions() {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    // Clear auth data (adjust based on how you store your token/session)
-    localStorage.removeItem('token');
-    sessionStorage.clear();
+        console.log('Logout button clicked');
 
-    // Redirect to login page
-    navigate('/login');
+      localStorage.removeItem('access');
+      localStorage.removeItem('refresh');
+      localStorage.removeItem('user_id');
+      localStorage.removeItem('username');
+      localStorage.removeItem('email');
+      window.location.reload()
+
   };
 
   return (

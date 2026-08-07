@@ -25,9 +25,41 @@ const SCREEN_API_URL = "http://127.0.0.1:8000/screens/screen-position/";
 
 // Fields this panel edits, and how each maps onto the `screen` object's
 // keys. Only these are read from `screen` / sent back out.
-const FIELD_KEYS = ["width", "height", "x", "y", "fullscreen", "alwaysOnTop"];
-const SCREEN_KEY_MAP = { alwaysOnTop: "always_on_top" };
-const NUMERIC_FIELDS = new Set(["width", "height", "x", "y"]);
+const FIELD_KEYS = [
+  "width",
+  "height",
+  "x",
+  "y",
+  "fullscreen",
+  "alwaysOnTop",
+  "resizable",
+  "movable",
+  "minimizable",
+  "maximizable",
+  "visible",
+  "menuBarVisible",
+  "autoHideMenuBar",
+  "opacity",
+];
+
+const SCREEN_KEY_MAP = {
+  alwaysOnTop: "always_on_top",
+  menuBarVisible: "menu_bar_visible",
+  autoHideMenuBar: "auto_hide_menu_bar",
+};
+
+const NUMERIC_FIELDS = new Set(["width", "height", "x", "y", "opacity"]);
+const BOOLEAN_FIELDS = new Set([
+  "fullscreen",
+  "alwaysOnTop",
+  "resizable",
+  "movable",
+  "minimizable",
+  "maximizable",
+  "visible",
+  "menuBarVisible",
+  "autoHideMenuBar",
+]);
 
 function formFromScreen(screen) {
   const get = (key) => screen?.[SCREEN_KEY_MAP[key] || key];
@@ -39,6 +71,14 @@ function formFromScreen(screen) {
     y: get("y") ?? "",
     fullscreen: get("fullscreen") ?? false,
     alwaysOnTop: get("alwaysOnTop") ?? false,
+    resizable: get("resizable") ?? true,
+    movable: get("movable") ?? true,
+    minimizable: get("minimizable") ?? true,
+    maximizable: get("maximizable") ?? true,
+    visible: get("visible") ?? true,
+    menuBarVisible: get("menuBarVisible") ?? false,
+    autoHideMenuBar: get("autoHideMenuBar") ?? true,
+    opacity: get("opacity") ?? 1,
   };
 }
 
@@ -59,7 +99,29 @@ function SectionLabel({ children }) {
   );
 }
 
-// Fetches its own initial screen data via REST, but now uses the shared
+function ToggleRow({ label, checked, onChange }) {
+  return (
+    <FormControlLabel
+      sx={{
+        ml: 0,
+        justifyContent: "space-between",
+        "& .MuiFormControlLabel-label": {
+          fontFamily: "'Manrope', sans-serif",
+          fontWeight: 700,
+          fontSize: "0.65rem",
+          letterSpacing: "0.08em",
+          textTransform: "uppercase",
+          color: "text.secondary",
+        },
+      }}
+      labelPlacement="start"
+      control={<Switch checked={checked} onChange={(e) => onChange(e.target.checked)} />}
+      label={label}
+    />
+  );
+}
+
+// Fetches its own initial screen data via REST, but uses the shared
 // SocketContext connection (via `send`) instead of owning its own socket.
 function ScreenControlPanel() {
   const { connected, send, controlledScreen, setControlledScreen } = useSocket();
@@ -249,6 +311,7 @@ function ScreenControlPanel() {
                 label="Width"
                 fullWidth
                 size="small"
+                type="number"
                 value={form.width}
                 onChange={(e) => handleChange("width", e.target.value)}
                 sx={numberFieldSx}
@@ -258,6 +321,7 @@ function ScreenControlPanel() {
                 label="Height"
                 fullWidth
                 size="small"
+                type="number"
                 value={form.height}
                 onChange={(e) => handleChange("height", e.target.value)}
                 sx={numberFieldSx}
@@ -273,6 +337,7 @@ function ScreenControlPanel() {
                 label="Position X"
                 fullWidth
                 size="small"
+                type="number"
                 value={form.x}
                 onChange={(e) => handleChange("x", e.target.value)}
                 sx={numberFieldSx}
@@ -281,6 +346,7 @@ function ScreenControlPanel() {
                 label="Position Y"
                 fullWidth
                 size="small"
+                type="number"
                 value={form.y}
                 onChange={(e) => handleChange("y", e.target.value)}
                 sx={numberFieldSx}
@@ -288,31 +354,27 @@ function ScreenControlPanel() {
             </Stack>
           </Stack>
 
+     
+
           <Stack spacing={0.5}>
             <SectionLabel>Window Behavior</SectionLabel>
-            <FormControlLabel
-              sx={{ ml: 0, justifyContent: "space-between", "& .MuiFormControlLabel-label": { fontFamily: "'Manrope', sans-serif", fontWeight: 700, fontSize: "0.4rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "text.secondary" } }}
-              labelPlacement="start"
-              control={
-                <Switch
-                  checked={form.fullscreen}
-                  onChange={(e) => handleChange("fullscreen", e.target.checked)}
-                />
-              }
+            <ToggleRow
               label="Fullscreen"
+              checked={form.fullscreen}
+              onChange={(v) => handleChange("fullscreen", v)}
             />
-            <FormControlLabel
-              sx={{ ml: 0, justifyContent: "space-between", "& .MuiFormControlLabel-label": { fontFamily: "'Manrope', sans-serif", fontWeight: 700, fontSize: "0.4rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "text.secondary" } }}
-              labelPlacement="start"
-              control={
-                <Switch
-                  checked={form.alwaysOnTop}
-                  onChange={(e) => handleChange("alwaysOnTop", e.target.checked)}
-                />
-              }
+            <ToggleRow
               label="Always On Top"
+              checked={form.alwaysOnTop}
+              onChange={(v) => handleChange("alwaysOnTop", v)}
             />
+          
+          
+            
+           
           </Stack>
+
+         
         </Stack>
       </Box>
 

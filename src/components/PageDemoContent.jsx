@@ -5,7 +5,7 @@ import Typography from '@mui/material/Typography';
 import Dashboard from '../Screens/Dashboard';
 import ScreenManager from '../Screens/ScreenManager';
 import ManualScoring from '../Screens/ManualScoring';
-
+import FreeTextManager from '../Screens/FreeTextManager';
 export default function DemoPageContent({ pathname }) {
 
 
@@ -22,6 +22,8 @@ export default function DemoPageContent({ pathname }) {
       return <ScreenManager/>
     case '/ManualScoring':
       return <ManualScoring/>
+    case '/FreeTextManager':
+      return <FreeTextManager/>
 
     default:
       title = 'Page not found';
