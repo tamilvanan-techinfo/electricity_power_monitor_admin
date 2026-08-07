@@ -104,7 +104,7 @@ const theme = extendTheme({
     MuiButton: {
       defaultProps: { disableElevation: true },
       styleOverrides: {
-        root: { borderRadius: 8, paddingInline: 16 },
+        root: { borderRadius: 8, paddingInline: 16, fontFamily: fontDisplay, fontWeight: 700 },
         contained: ({ theme }) => ({
           "&:hover": {
             boxShadow:
@@ -126,22 +126,6 @@ const theme = extendTheme({
     MuiOutlinedInput: {
       styleOverrides: {
         root: { borderRadius: 8 },
-      },
-    },
-    MuiListItemText: {
-      styleOverrides: {
-        primary: { fontFamily: fontBody, fontWeight: 700, fontSize: "0.975rem" },
-        secondary: { fontFamily: fontBody },
-      },
-    },
-    MuiListItemButton: {
-      styleOverrides: {
-        root: { fontFamily: fontBody },
-      },
-    },
-    MuiListSubheader: {
-      styleOverrides: {
-        root: { fontFamily: fontDisplay, fontWeight: 700, fontSize: "0.7rem", letterSpacing: "0.06em", textTransform: "uppercase" },
       },
     },
     MuiDataGrid: {

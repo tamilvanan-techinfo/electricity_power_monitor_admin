@@ -72,7 +72,19 @@ function startConnectivityWatcher() {
 /* ---------------- SQLite ---------------- */
 
 function getDatabasePath() {
-  return path.join(app.getPath("userData"), "cache.db");
+  const dbPath = process.env.GO_GREEN_DB_PATH;
+
+  if (!dbPath) {
+    throw new Error("GO_GREEN_DB_PATH environment variable is not set.");
+  }
+
+  const dir = path.dirname(dbPath);
+
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+
+  return dbPath;
 }
 
 function ensureDatabaseFile() {
@@ -98,6 +110,9 @@ function initDatabase() {
       if (err) return reject(err);
 
       console.log("Connected to SQLite:", dbPath);
+      //WAL mode for better concurrency
+      db.run("PRAGMA journal_mode=WAL;");
+      db.run("PRAGMA busy_timeout=5000;");
 
       db.run(
         `
@@ -120,6 +135,17 @@ function initDatabase() {
         (err2) => {
           if (err2) return reject(err2);
           // participantCache = new IndividualParticipantCache(db);
+          // Migrations for existing data - safe to run every time
+          db.run(`ALTER TABLE individual_participants ADD COLUMN synced INTEGER DEFAULT 0`, (err) => {
+            if (err && !err.message.includes("duplicate column")) {
+              console.error("Migration failed (synced):", err);
+            }
+          });
+          db.run(`ALTER TABLE individual_participants ADD COLUMN last_modified DATETIME DEFAULT CURRENT_TIMESTAMP`, (err) => {
+            if (err && !err.message.includes("duplicate column")) {
+              console.error("Migration failed (last_modified):", err);
+            }
+          });
           resolve();
         }
       );

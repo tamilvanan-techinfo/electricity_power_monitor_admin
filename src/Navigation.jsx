@@ -2,6 +2,7 @@ import React from "react";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import TvIcon from '@mui/icons-material/Tv';
 import ScoreboardIcon from '@mui/icons-material/Scoreboard';
+import TextSnippetIcon from '@mui/icons-material/TextSnippet';
 
 const NAVIGATION = [
   {
@@ -22,6 +23,12 @@ const NAVIGATION = [
     segment: "ManualScoring",
     title: "Manual Scoring",
     icon: <ScoreboardIcon />,
+
+  },
+  {
+    segment: "FreeTextManager",
+    title: "Free Text",
+    icon: <TextSnippetIcon />,
   },
 ];
 

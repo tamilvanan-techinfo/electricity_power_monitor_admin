@@ -2,65 +2,53 @@ import * as React from 'react';
 import PropTypes from 'prop-types';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import MenuList from '@mui/material/MenuList';
-import MenuItem from '@mui/material/MenuItem';
-import ListItemText from '@mui/material/ListItemText';
-import ListItemIcon from '@mui/material/ListItemIcon';
-import Avatar from '@mui/material/Avatar';
 import Divider from '@mui/material/Divider';
-import { Account, AccountPopoverFooter, SignOutButton } from '@toolpad/core/Account';
+import Button from '@mui/material/Button';
+import CircularProgress from '@mui/material/CircularProgress';
+import LogoutIcon from '@mui/icons-material/Logout';
+import { Account, AccountPopoverFooter } from '@toolpad/core/Account';
 import AccountSidebarPreview from './AccountSidebarPreview';
-// import { accounts } from '../data/accounts';
+import config from '../config.json';
+import ScreenControlPanel from './ScreenControlDrawer'
 
 function SidebarFooterAccountPopover() {
+  const [loading, setLoading] = React.useState(false);
+
+  const handleLogout = async () => {
+    console.log('Logout button clicked');
+    setLoading(true);
+    try {
+      localStorage.removeItem('access');
+      localStorage.removeItem('refresh');
+      localStorage.removeItem('user_id');
+      localStorage.removeItem('username');
+      localStorage.removeItem('email');
+      window.location.reload()
+
+    } catch (err) {
+      console.error('Logout request failed:', err);
+    } 
+  };
+
   return (
     <Stack direction="column">
       <Typography variant="body2" mx={2} mt={1}>
-        Accounts
+        Account
       </Typography>
-      {/* <MenuList>
-        {accounts.map((account) => (
-          <MenuItem
-            key={account.id}
-            component="button"
-            sx={{
-              justifyContent: 'flex-start',
-              width: '100%',
-              columnGap: 2,
-            }}
-          >
-            <ListItemIcon>
-              <Avatar
-                sx={{
-                  width: 32,
-                  height: 32,
-                  fontSize: '0.95rem',
-                  bgcolor: account.color,
-                }}
-                src={account.image ?? ''}
-                alt={account.name ?? ''}
-              >
-                {account.name[0]}
-              </Avatar>
-            </ListItemIcon>
-            <ListItemText
-              sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'flex-start',
-                width: '100%',
-              }}
-              primary={account.name}
-              secondary={account.email}
-              primaryTypographyProps={{ variant: 'body2' }}
-              secondaryTypographyProps={{ variant: 'caption' }}
-            />
-          </MenuItem>
-        ))}
-      </MenuList> */}
       <Divider />
       <AccountPopoverFooter>
-        <SignOutButton />
+        <Button
+          fullWidth
+          variant="outlined"
+          color="error"
+          size="small"
+          startIcon={loading ? <CircularProgress size={14} color="error" /> : <LogoutIcon fontSize="medium" />}
+          onClick={handleLogout}
+          disabled={loading}
+          sx={{ mx: 1, my: 1, width: 'calc(100% - 16px)' }}
+        >
+          {loading ? 'Signing out...' : 'Sign Out'}
+        </Button>
       </AccountPopoverFooter>
     </Stack>
   );
@@ -76,7 +64,9 @@ const createPreviewComponent = (mini) => {
 export default function SidebarFooterAccount({ mini }) {
   const PreviewComponent = React.useMemo(() => createPreviewComponent(mini), [mini]);
   return (
-    <Account
+    <>
+    <ScreenControlPanel/>
+    {/* <Account
       slots={{
         preview: PreviewComponent,
         popoverContent: SidebarFooterAccountPopover,
@@ -98,7 +88,7 @@ export default function SidebarFooterAccount({ mini }) {
                   content: '""',
                   display: 'block',
                   position: 'absolute',
-                  bottom: 10,
+                  bottom: 0,
                   left: 0,
                   width: 10,
                   height: 10,
@@ -111,7 +101,8 @@ export default function SidebarFooterAccount({ mini }) {
           },
         },
       }}
-    />
+    /> */}
+    </>
   );
 }
 
