@@ -3,7 +3,7 @@ import DashboardIcon from "@mui/icons-material/Dashboard";
 import TvIcon from '@mui/icons-material/Tv';
 import ScoreboardIcon from '@mui/icons-material/Scoreboard';
 import TextSnippetIcon from '@mui/icons-material/TextSnippet';
-
+import SettingsApplicationsIcon from '@material-ui/icons/SettingsApplications';
 const NAVIGATION = [
   {
     kind: "header",
@@ -29,6 +29,11 @@ const NAVIGATION = [
     segment: "FreeTextManager",
     title: "Free Text",
     icon: <TextSnippetIcon />,
+  },
+  {
+    segment: "AppSettings",
+    title: "App Settings",
+    icon: <SettingsApplicationsIcon />,
   },
 ];
 

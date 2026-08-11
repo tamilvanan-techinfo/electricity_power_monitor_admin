@@ -3,7 +3,7 @@
   "productName": "electricity_power_monitoring_admin",
   "version": "1.0.0",
   "description": "My Electron application description",
-  "main": ".vite/build/main.js",
+  "main": ".vite/build/main.mjs",
   "private": true,
   "scripts": {
     "start": "electron-forge start",
@@ -31,11 +31,13 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "electron": "43.1.1",
+    "electron-rebuild": "^3.2.9",
     "vite": "^5.4.21"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
+    "@material-ui/icons": "^4.11.3",
     "@mui/icons-material": "^9.2.0",
     "@mui/material": "^9.2.0",
     "@mui/toolpad": "^0.1.51",
@@ -51,6 +53,6 @@
     "socket.io-client": "^4.8.3",
     "sqlite3": "^6.0.1",
     "webfontloader": "^1.6.28",
-    "ws": "^8.21.1"
+    "ws": "^8.21.3"
   }
 }

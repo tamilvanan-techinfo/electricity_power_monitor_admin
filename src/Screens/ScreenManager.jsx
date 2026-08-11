@@ -34,8 +34,8 @@ import { tokens } from "../Theme";
 import { useSocket } from "../contexts/SocketContext";
 import PlayerControllerDrawer from "../components/PlayerControllerDrawer";
 import GroupHandlingDrawer from "../components/GroupHandlingDrawer";
-
-const API_BASE = "http://127.0.0.1:8000";
+import api from "../config.json"
+const API_BASE = api.apiBase;
 
 // Control-panel card: hairline border instead of a drop shadow, teal glow
 // on the currently-live tile so the grid reads like a bank of monitors.

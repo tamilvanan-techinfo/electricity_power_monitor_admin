@@ -28,7 +28,7 @@ import { useSocket } from '../contexts/SocketContext'
 
 // The route your Electron app (and the LED screen itself) renders the
 // live free-text display on. The webview below mirrors exactly that page.
-const DISPLAY_URL = 'http://localhost:5173/free-text/#/free-text'
+const DISPLAY_URL = 'http://localhost:1029/free-text/#/free-text'
 
 
 const GOOGLE_FONTS = [

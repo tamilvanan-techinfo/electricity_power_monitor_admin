@@ -7,6 +7,7 @@ import DashboardPage from "./Screens/Dashboard";
 import ScreenManager from "./Screens/ScreenManager";
 import ManualScoring from "./Screens/ManualScoring";
 import FreeTextManager from "./Screens/FreeTextManager";
+import AppSettings from "./Screens/AppSettings";
 
 const protectedRoutes = [
   {
@@ -25,6 +26,10 @@ const protectedRoutes = [
   {
     path: "/FreeTextManager",
     element: <FreeTextManager />,
+  },
+  {
+    path: "/AppSettings",
+    element: <AppSettings />,
   },
 ];
 

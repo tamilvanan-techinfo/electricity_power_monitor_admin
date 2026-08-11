@@ -25,8 +25,8 @@ import {
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Check";
-
-const API_BASE = "http://127.0.0.1:8000/api";
+import api from "../config.json"
+const API_BASE = api.apiBase+"/api";
 const PARTICIPANT_CYCLES_URL = `${API_BASE}/admin/participant-cycles/`;
 const GROUP_URL = `${API_BASE}/group/`; // adjust to match your actual group endpoint path
 

@@ -5,8 +5,8 @@ import React, {
   useRef,
   useState,
 } from "react";
-
-const WS_URL = "ws://127.0.0.1:8000/ws/screen/admin/";
+import api from "../config.json"
+const WS_URL = api.socketBase+"/ws/screen/admin/";
 
 const SocketContext = createContext(null);
 

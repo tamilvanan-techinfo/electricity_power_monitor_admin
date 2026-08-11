@@ -19,9 +19,9 @@ import TuneIcon from "@mui/icons-material/Tune";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import { tokens } from "../Theme";
 import { useSocket } from "../contexts/SocketContext";
-
+import api from "../config.json"
 // ---- Config the component owns internally ----
-const SCREEN_API_URL = "http://127.0.0.1:8000/screens/screen-position/";
+const SCREEN_API_URL = api.apiBase+"/screens/screen-position/";
 
 // Fields this panel edits, and how each maps onto the `screen` object's
 // keys. Only these are read from `screen` / sent back out.

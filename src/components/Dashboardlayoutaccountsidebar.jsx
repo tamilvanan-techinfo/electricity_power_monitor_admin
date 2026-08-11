@@ -3,7 +3,6 @@ import * as React from 'react';
 import PropTypes from 'prop-types';
 import { AppProvider } from '@toolpad/core/AppProvider';
 import { DashboardLayout } from '@toolpad/core/DashboardLayout';
-import { DemoProvider } from '@toolpad/core/internal';
 import demoTheme from '../Theme';
 import NAVIGATION from '../Navigation';
 import CustomToolbarActions from '../components/Customtoolbaractions';
@@ -16,7 +15,7 @@ import logo from "../asstes/logo.png";
 
 // The route your Electron app (and the LED screen itself) renders the
 // live display on — mirrored in the floating panel.
-const DISPLAY_URL = 'http://localhost:5173/';
+const DISPLAY_URL = 'http://localhost:1029/';
 
 // Inner component — must be inside UserProvider to use useUser()
 function DashboardContent({ window }) {
@@ -31,7 +30,7 @@ function DashboardContent({ window }) {
     };
   }, [pathname]);
 
-  const demoWindow = window !== undefined ? window() : undefined;
+  const appWindow = window !== undefined ? window() : undefined;
 
   const session = user
     ? { user: { name: user.username, email: user.email, image: null } }
@@ -47,32 +46,29 @@ function DashboardContent({ window }) {
   if (!user) return <LoginPage />;
 
   return (
-    <DemoProvider window={demoWindow}>
-      <AppProvider
-        navigation={NAVIGATION}
-        router={router}
-        theme={demoTheme}
-        window={demoWindow}
-        branding={{ title: "Energy Monitoing Admin Panel", logo:  <img src={logo} alt="logo" style={{ height: 32 }} /> }}
-        authentication={authentication}
-        session={session}
-        
+    <AppProvider
+      navigation={NAVIGATION}
+      router={router}
+      theme={demoTheme}
+      window={appWindow}
+      branding={{ title: "Energy Monitoing Admin Panel", logo: <img src={logo} alt="logo" style={{ height: 32 }} /> }}
+      authentication={authentication}
+      session={session}
+    >
+      <DashboardLayout
+        slots={{
+          toolbarActions: CustomToolbarActions,
+          sidebarFooter: SidebarFooterAccount,
+        }}
       >
-        <DashboardLayout
-          slots={{
-            toolbarActions: CustomToolbarActions,
-            sidebarFooter: SidebarFooterAccount,
-          }}
-        >
-          <DemoPageContent pathname={pathname} />
-        </DashboardLayout>
+        <DemoPageContent pathname={pathname} />
+      </DashboardLayout>
 
-        {/* Floating, draggable mini live-preview — sits above the layout,
-            persists across route changes since it's rendered outside
-            DemoPageContent. */}
-        <FloatingWebviewPanel src={DISPLAY_URL} title="Live Display" />
-      </AppProvider>
-    </DemoProvider>
+      {/* Floating, draggable mini live-preview — sits above the layout,
+          persists across route changes since it's rendered outside
+          DemoPageContent. */}
+      <FloatingWebviewPanel src={DISPLAY_URL} title="Live Display" />
+    </AppProvider>
   );
 }
 

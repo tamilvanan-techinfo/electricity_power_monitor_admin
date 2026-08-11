@@ -15,14 +15,14 @@ import {
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import TuneIcon from '@mui/icons-material/Tune'
-
+import api from "../config.json"
 const WS_URL = (() => {
   const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
   return `${protocol}://${"127.0.0.1:8000"}/ws/power-monitor/admin/`
 })()
 
-const ACTIVE_PARTICIPENT_URL = 'http://127.0.0.1:8000/screens/active-participent/'
-const PARTICIPENT_CYCLE_URL = 'http://127.0.0.1:8000/screens/participent-cycle/'
+const ACTIVE_PARTICIPENT_URL = api.apiBase+'/screens/active-participent/'
+const PARTICIPENT_CYCLE_URL = api.apiBase+'/screens/participent-cycle/'
 
 /**
  * PlayerControllerDrawer

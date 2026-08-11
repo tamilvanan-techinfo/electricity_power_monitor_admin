@@ -37,14 +37,14 @@ const theme = extendTheme({
     borderRadius: 10,
   },
   typography: {
-    fontFamily: fontBody,
+    // fontFamily: fontBody,
     h4: { fontFamily: fontDisplay, fontWeight: 800, letterSpacing: "-0.02em" },
     h5: { fontFamily: fontDisplay, fontWeight: 700, letterSpacing: "-0.01em" },
     h6: { fontFamily: fontDisplay, fontWeight: 700 },
-    subtitle1: { fontFamily: fontBody, fontWeight: 500 },
-    subtitle2: { fontFamily: fontBody, fontWeight: 600 },
+    // subtitle1: { fontFamily: fontBody, fontWeight: 500 },
+    // subtitle2: { fontFamily: fontBody, fontWeight: 600 },
     button: { fontFamily: fontDisplay, fontWeight: 700, textTransform: "none", letterSpacing: 0 },
-    caption: { fontFamily: fontMono, letterSpacing: "0.02em" },
+    // caption: { fontFamily: fontMono, letterSpacing: "0.02em" },
   },
   colorSchemes: {
     light: {
@@ -98,7 +98,7 @@ const theme = extendTheme({
     MuiCardHeader: {
       styleOverrides: {
         title: { fontFamily: fontDisplay, fontWeight: 700, fontSize: "1.05rem" },
-        subheader: { fontFamily: fontBody },
+        // subheader: { fontFamily: fontBody },
       },
     },
     MuiButton: {
@@ -117,7 +117,7 @@ const theme = extendTheme({
     },
     MuiChip: {
       styleOverrides: {
-        root: { fontFamily: fontMono, fontWeight: 500, borderRadius: 6 },
+        // root: { fontFamily: fontMono, fontWeight: 500, borderRadius: 6 },
       },
     },
     MuiTextField: {
@@ -132,8 +132,8 @@ const theme = extendTheme({
       styleOverrides: {
         root: {
           border: "none",
-          fontFamily: fontBody,
-          "& .MuiDataGrid-cell": { fontFamily: fontMono, fontSize: "0.85rem", display: "flex", alignItems: "center" },
+          // fontFamily: fontBody,
+          // "& .MuiDataGrid-cell": { fontFamily: fontMono, fontSize: "0.85rem", display: "flex", alignItems: "center" },
           "& .MuiDataGrid-columnHeaderTitle": {
             fontFamily: fontDisplay,
             fontWeight: 700,
